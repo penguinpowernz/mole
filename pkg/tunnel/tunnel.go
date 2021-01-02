@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 	"sync"
 
 	"github.com/AlexanderGrom/go-event"
@@ -31,19 +32,15 @@ type Tunnel struct {
 // NewTunnelFromPool will create a new tunnel from the given address, remote/local ports
 // and private key, using the given pool to obtain a client connection
 func NewTunnelFromPool(pool Pool, addr, remote, local, key string) (*Tunnel, error) {
-	cl, err := pool.GetClient(addr, key)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Tunnel{
+	t := &Tunnel{
 		Address: addr,
 		Local:   local,
 		Remote:  remote,
 		Enabled: true,
-		mu:      new(sync.Mutex),
-		dialer:  cl.dialerFunc(),
-	}, nil
+	}
+
+	err := t.furnish(pool, key)
+	return nil, err
 }
 
 // NewTunnel will create a new tunnel from the given address, remote/local ports
@@ -64,18 +61,22 @@ func NewTunnelsFromConfigAndPool(pool Pool, cfg Config) ([]*Tunnel, error) {
 	tuns := []*Tunnel{}
 
 	for _, t := range cfg.Tunnels {
-		cl, err := pool.GetClient(t.Address, cfg.PrivateKey)
-		if err != nil {
-			return tuns, err
-		}
-
 		tun := &t
-		tun.mu = new(sync.Mutex)
-		tun.dialer = cl.dialerFunc()
+		tun.furnish(pool, cfg.PrivateKey)
 		tuns = append(tuns, tun)
 	}
 
 	return tuns, nil
+}
+
+func (tun *Tunnel) furnish(pool Pool, key string) error {
+	cl, err := pool.GetClient(tun.Address, key)
+	if err != nil {
+		return err
+	}
+	tun.mu = new(sync.Mutex)
+	tun.dialer = cl.dialerFunc()
+	return nil
 }
 
 // Listen will listen to event from the dispatcher
@@ -125,6 +126,8 @@ func (tun *Tunnel) Open() (err error) {
 		return nil
 	}
 
+	tun.normalizePorts()
+
 	tun.lstnr, err = net.Listen("tcp", tun.Local)
 	if err != nil {
 		log.Println("Failed to open port for local listener: ", err)
@@ -147,6 +150,16 @@ func (tun *Tunnel) listenForConnections() {
 		}
 
 		go tun.handleConnection(local)
+	}
+}
+
+func (tun *Tunnel) normalizePorts() {
+	if tun.Remote[0] == ':' || (tun.Remote[0] != ':' && !strings.Contains(tun.Remote, ":")) {
+		tun.Remote = "localhost:" + tun.Remote
+	}
+
+	if tun.Local[0] == ':' || (tun.Local[0] != ':' && !strings.Contains(tun.Local, ":")) {
+		tun.Local = "localhost:" + tun.Local
 	}
 }
 

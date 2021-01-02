@@ -18,8 +18,8 @@ import (
 
 func main() {
 	var cfgFile, generateConfig, port string
-	flag.StringVar(&generateConfig, "g", "config.yml", "generate a new config file to the given location")
-	flag.StringVar(&cfgFile, "c", "config.yml", "the config file to use")
+	flag.StringVar(&generateConfig, "g", "", "generate a new config file to the given location")
+	flag.StringVar(&cfgFile, "c", "", "the config file to use")
 	flag.StringVar(&port, "p", "", "the port to serve the server on")
 	flag.Parse()
 
