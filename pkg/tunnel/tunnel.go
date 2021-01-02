@@ -47,6 +47,28 @@ func NewTunnel(addr, remote, local, key string) (*Tunnel, error) {
 	return NewTunnelFromPool(DefaultPool, addr, remote, local, key)
 }
 
+func NewTunnelsFromConfig(cfg Config) ([]*Tunnel, error) {
+	return NewTunnelsFromConfigAndPool(DefaultPool, cfg)
+}
+
+func NewTunnelsFromConfigAndPool(pool Pool, cfg Config) ([]*Tunnel, error) {
+	tuns := []*Tunnel{}
+
+	for _, t := range cfg.Tunnels {
+		cl, err := pool.GetClient(t.Address, cfg.PrivateKey)
+		if err != nil {
+			return tuns, err
+		}
+
+		tun := &t
+		tun.mu = new(sync.Mutex)
+		tun.dialer = cl.DialerFunc()
+		tuns = append(tuns, tun)
+	}
+
+	return tuns, nil
+}
+
 func (tun *Tunnel) Listen(events event.Dispatcher) {
 	tun.ev = events
 	// events.On("client.connected", func(cl *Client) error {
