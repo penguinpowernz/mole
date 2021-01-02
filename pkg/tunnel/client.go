@@ -54,7 +54,7 @@ import (
 
 func NewClient(addr string, _privkey string) (*Client, error) {
 	sshcfg := &ssh.ClientConfig{
-		User:            os.Getenv("USER") + ":" + func() string { s, _ := os.Hostname(); return s }(),
+		User:            os.Getenv("USER"),
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		// HostKeyCallback: ssh.FixedHostKey(hostKey),
 	}
