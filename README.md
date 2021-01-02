@@ -31,6 +31,14 @@ in the command line argument:
 
     moled -p :8023
 
+The client can specify the tunnel to run:
+
+    mole -r 3000 -l 3000 -a 192.168.1.100:8022 -i ~/.ssh/id_rsa
+    mole -r 3000 -l 3000 -a 192.168.1.100:22 -i ~/.ssh/id_rsa              // connect to a normal SSH server
+    mole -c mole.yml                                                       // TODO: use the tunnels and private key from config file
+    mole -lt 3000:localhost:3000 -a 192.168.1.100:8022  -i ~/.ssh/id_rsa   // TODO: local port forward using the typical SSH format
+    mole -rt :22:localhost:33066 -a 192.168.1.100:8022  -i ~/.ssh/id_rsa   // TODO: remote port forward using the typical SSH format
+
 ## Config File
 
 ### Server
@@ -100,6 +108,7 @@ into your `~/.ssh/authorized_keys` file on that server.
 
 - [ ] allow using config file in the mole client
 - [ ] specify a tunnel with the standard SSH format (e.g. `3344:localhost:3301`)
+- [ ] for single port forward command, use default SSH key if none specified (e.g. `~/.ssh/id_rsa`)
 - [ ] clean up logging
 - [ ] add interactive client acceptance
 - [ ] add host key checking for clients
