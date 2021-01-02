@@ -11,12 +11,15 @@ import (
 	gossh "golang.org/x/crypto/ssh"
 )
 
+// Server represents the tunnel server
 type Server struct {
 	*ssh.Server
 	cfg    *Config
 	events event.Dispatcher
 }
 
+// NewServer will create a new tunnel server using the given config
+// events dispatcher
 func NewServer(cfg *Config, events event.Dispatcher) *Server {
 	svr := &Server{cfg: cfg, events: events}
 	svr.buildSSHServer()
@@ -74,6 +77,8 @@ func (svr *Server) buildSSHServer() {
 	}
 }
 
+// ListenAndServe will run the server until the context is done or
+// the server quits for some reason
 func (svr *Server) ListenAndServe(ctx context.Context) {
 	go func() {
 		err := svr.Server.ListenAndServe()
@@ -84,6 +89,8 @@ func (svr *Server) ListenAndServe(ctx context.Context) {
 	svr.Close()
 }
 
+// IsKeyAuthorized is a handler for the server authentication check returning true
+// if the public key is match for the given client
 func (svr *Server) IsKeyAuthorized(ctx ssh.Context, key ssh.PublicKey) bool {
 	svr.events.Go("log", fmt.Sprintf("incoming authentication req for %s from %s", ctx.User(), ctx.RemoteAddr().String()))
 	allowed, _, _, _, _ := ssh.ParseAuthorizedKey(svr.cfg.AuthorizedKeyBytes())

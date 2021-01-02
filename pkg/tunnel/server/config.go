@@ -8,10 +8,11 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/gliderlabs/ssh"
-	"github.com/penguinpowernz/eztunnel/internal/util"
+	"github.com/penguinpowernz/mole/internal/util"
 	gossh "golang.org/x/crypto/ssh"
 )
 
+// Config is a server config
 type Config struct {
 	Filename       string   `json:"-"`
 	AuthorizedKeys []string `json:"authorized_keys"`
@@ -20,6 +21,7 @@ type Config struct {
 	HostKey        string   `json:"host_key"`
 }
 
+// AuthorizedKeyBytes will return the authorized keys as a byte array
 func (cfg Config) AuthorizedKeyBytes() []byte {
 	s := ""
 	for _, k := range cfg.AuthorizedKeys {
@@ -43,6 +45,7 @@ func parseString(in []byte) (out, rest []byte, ok bool) {
 	return
 }
 
+// AddAuthorizedKey will add a new authorized key, can either be a string or an ssh.PublicKey object
 func (cfg *Config) AddAuthorizedKey(key interface{}) {
 	switch v := key.(type) {
 	case string:
@@ -52,6 +55,7 @@ func (cfg *Config) AddAuthorizedKey(key interface{}) {
 	}
 }
 
+// Save will save the config file
 func (cfg Config) Save() error {
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
@@ -60,6 +64,7 @@ func (cfg Config) Save() error {
 	return ioutil.WriteFile(cfg.Filename, data, 0644)
 }
 
+// LoadConfig will load the config from the given filename
 func LoadConfig(fn string) (cfg *Config, err error) {
 	data, err := ioutil.ReadFile(fn)
 	if err != nil {
@@ -71,6 +76,7 @@ func LoadConfig(fn string) (cfg *Config, err error) {
 	return
 }
 
+// GenerateConfig will generate a config with the host key preset
 func GenerateConfig() Config {
 	cfg := Config{ListenPort: ":8022", RunServer: true}
 
@@ -83,6 +89,8 @@ func GenerateConfig() Config {
 	return cfg
 }
 
+// GenerateConfigIfNeeded will generate a new config to the given filename
+// if it doesn't already exist
 func GenerateConfigIfNeeded(cfgFile string) (err error) {
 	if _, err = os.Stat(cfgFile); !os.IsNotExist(err) {
 		return

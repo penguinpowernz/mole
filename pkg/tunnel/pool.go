@@ -34,6 +34,8 @@ func (pl FakePool) GetClient(addr, key string) (*Client, error) {
 	return cl, err
 }
 
+// NewConnPool will return a new connection pool that stores active client connections
+// or add and connects to clients that aren't already in the pool
 func NewConnPool(ctx context.Context, events event.Dispatcher) *ConnPool {
 	return &ConnPool{ctx: ctx, events: events}
 }

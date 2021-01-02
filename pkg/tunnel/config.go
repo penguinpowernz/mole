@@ -9,6 +9,7 @@ import (
 	"github.com/penguinpowernz/mole/internal/util"
 )
 
+// Config represents the config file for the tunnel client
 type Config struct {
 	Filename   string   `json:"-"`
 	Tunnels    []Tunnel `json:"tunnels"`
@@ -16,6 +17,7 @@ type Config struct {
 	PrivateKey string   `json:"private_key"`
 }
 
+// Save will save the config to disk
 func (cfg Config) Save() error {
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
@@ -24,6 +26,7 @@ func (cfg Config) Save() error {
 	return ioutil.WriteFile(cfg.Filename, data, 0644)
 }
 
+// LoadConfig will load the config from disk
 func LoadConfig(fn string) (cfg *Config, err error) {
 	data, err := ioutil.ReadFile(fn)
 	if err != nil {
@@ -35,6 +38,8 @@ func LoadConfig(fn string) (cfg *Config, err error) {
 	return
 }
 
+// GenerateConfig will generate a config with new private
+// and public key
 func GenerateConfig() Config {
 	cfg := Config{}
 
@@ -47,6 +52,8 @@ func GenerateConfig() Config {
 	return cfg
 }
 
+// GenerateConfigIfNeeded will only generate a new file if the
+// given filename does not exist
 func GenerateConfigIfNeeded(cfgFile string) (err error) {
 	if _, err = os.Stat(cfgFile); !os.IsNotExist(err) {
 		return

@@ -11,47 +11,9 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// type ClientManager struct {
-// 	clients []*Client
-// 	events  event.Dispatcher
-// 	cfg     *Config
-// }
-
-// func (mgr ClientManager) Listen() {
-// 	mgr.events.On("connect.client", func(addr string) error {
-
-// 		cl, ok := mgr.FindClientByAddr(addr)
-// 		if ok {
-// 			mgr.events.Go("client.connected", cl)
-// 			return nil
-// 		}
-
-// 		cl, err := NewClient(addr, mgr.cfg.PrivateKey)
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		if err = cl.Connect(); err != nil {
-// 			return err
-// 		}
-
-// 		mgr.events.Go("client.connected", cl)
-
-// 		mgr.clients = append(mgr.clients, cl)
-// 		return nil
-// 	})
-
-// }
-
-// func (mgr *ClientManager) FindClientByAddr(addr string) (*Client, bool) {
-// 	for _, cl := range mgr.clients {
-// 		if cl.addr == addr {
-// 			return cl, true
-// 		}
-// 	}
-// 	return nil, false
-// }
-
+// NewClient will create a new client that will connect to the given address
+// and authenticate using the given private key text.  It will return an error
+// if the private key could not be parsed
 func NewClient(addr string, _privkey string) (*Client, error) {
 	sshcfg := &ssh.ClientConfig{
 		User:            os.Getenv("USER"),
@@ -73,6 +35,7 @@ func NewClient(addr string, _privkey string) (*Client, error) {
 	}, nil
 }
 
+// Client is an SSH connection to a mole server or SSH server
 type Client struct {
 	addr      string
 	ssh       *ssh.Client
@@ -83,10 +46,11 @@ type Client struct {
 	deadChan chan struct{}
 }
 
-func (cl *Client) DialerFunc() Dialer {
+func (cl *Client) dialerFunc() Dialer {
 	return cl.ssh.Dial
 }
 
+// WaitForConnect will block until the client is connected
 func (cl *Client) WaitForConnect() {
 	for {
 		if cl.connected {
@@ -96,13 +60,13 @@ func (cl *Client) WaitForConnect() {
 	}
 }
 
-func (cl *Client) IsForMe(tun Tunnel) bool {
-	return tun.Address == cl.addr
-}
+// Close will close the client connections
 func (cl *Client) Close() (err error) {
 	return cl.ssh.Close()
 }
 
+// ConnectWithContext will connect using the given context to signal when to disconnect or stop
+// trying to connect.  This will loop to continuously attempt to connect to the tunnel
 func (cl *Client) ConnectWithContext(ctx context.Context, events event.Dispatcher) {
 	t := time.NewTicker(time.Second * 5)
 
@@ -139,6 +103,8 @@ func (cl *Client) ConnectWithContext(ctx context.Context, events event.Dispatche
 	}
 }
 
+// Connect will connect to the server returning an error
+// if the connect failed
 func (cl *Client) Connect() (err error) {
 	cl.ssh, err = ssh.Dial("tcp", cl.addr, cl.sshcfg)
 	if err != nil {
