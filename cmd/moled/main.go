@@ -104,9 +104,10 @@ func loadConfig(specifiedFilename string) *server.Config {
 
 	cfg, err := server.LoadConfig(specifiedFilename)
 	if err != nil {
-		log.Fatal("Failed to create session: ", err)
+		log.Fatal("Failed to load config from", specifiedFilename, "-", err)
 	}
 
+	log.Println("loaded config file from", specifiedFilename)
 	return cfg
 }
 
