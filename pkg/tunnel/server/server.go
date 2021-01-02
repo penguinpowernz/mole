@@ -80,13 +80,23 @@ func (svr *Server) buildSSHServer() {
 // ListenAndServe will run the server until the context is done or
 // the server quits for some reason
 func (svr *Server) ListenAndServe(ctx context.Context) {
+	svrStopped := make(chan struct{})
 	go func() {
 		err := svr.Server.ListenAndServe()
-		svr.events.Go("log", "ERROR: "+err.Error())
-		svr.Close()
+		svr.events.Go("error", err)
+		close(svrStopped)
 	}()
-	<-ctx.Done()
-	svr.Close()
+
+	defer svr.Close()
+
+	for {
+		select {
+		case <-svrStopped:
+			return
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 // IsKeyAuthorized is a handler for the server authentication check returning true
