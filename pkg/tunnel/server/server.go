@@ -102,9 +102,17 @@ func (svr *Server) ListenAndServe(ctx context.Context) {
 // IsKeyAuthorized is a handler for the server authentication check returning true
 // if the public key is match for the given client
 func (svr *Server) IsKeyAuthorized(ctx ssh.Context, key ssh.PublicKey) bool {
-	svr.events.Go("log", fmt.Sprintf("incoming authentication req for %s from %s", ctx.User(), ctx.RemoteAddr().String()))
-	allowed, _, _, _, _ := ssh.ParseAuthorizedKey(svr.cfg.AuthorizedKeyBytes())
-	log.Printf("keychekc %s\n", string(gossh.MarshalAuthorizedKey(key)))
-	log.Printf("%s\n", string(svr.cfg.AuthorizedKeyBytes()))
-	return ssh.KeysEqual(key, allowed)
+	svr.events.Go("log", fmt.Sprintf("incoming authentication request for %s from %s", ctx.User(), ctx.RemoteAddr().String()))
+	allowedKeys, _, _, _, err := ssh.ParseAuthorizedKey(svr.cfg.AuthorizedKeyBytes())
+	svr.events.Go("err", fmt.Errorf("failed to parse the authorized keys: %s", err))
+
+	allowed := ssh.KeysEqual(key, allowedKeys)
+
+	if allowed {
+		svr.events.Go("log", fmt.Sprintf("authentication granted for %s from %s", ctx.User(), ctx.RemoteAddr().String()))
+	} else {
+		svr.events.Go("log", fmt.Sprintf("authentication denied for %s from %s", ctx.User(), ctx.RemoteAddr().String()))
+	}
+
+	return allowed
 }
