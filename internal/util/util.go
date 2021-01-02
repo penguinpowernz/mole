@@ -11,32 +11,8 @@ import (
 	"os"
 	"os/exec"
 
-	eztunnel "github.com/penguinpowernz/eztunnel/pkg"
 	"golang.org/x/crypto/ssh"
 )
-
-func GenerateConfigIfNeeded(cfgFile string) (err error) {
-	if _, err = os.Stat(cfgFile); !os.IsNotExist(err) {
-		return
-	}
-
-	fmt.Println("First run, generating new config")
-
-	cfg := eztunnel.Config{ListenPort: ":8022", Tunnels: []eztunnel.Tunnel{}}
-
-	_, cfg.HostKey, err = MakeSSHKeyPair()
-	if err != nil {
-		return
-	}
-
-	cfg.PublicKey, cfg.PrivateKey, err = MakeSSHKeyPair()
-	if err != nil {
-		return
-	}
-
-	cfg.Filename = cfgFile
-	return cfg.Save()
-}
 
 func Clear() {
 	cmd := exec.Command("/usr/bin/clear")

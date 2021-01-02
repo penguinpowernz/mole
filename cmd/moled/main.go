@@ -94,7 +94,7 @@ func loadConfig(specifiedFilename string) *server.Config {
 		if !found {
 			fn = util.ConfigFiles[0]
 			log.Println("config file not found, generating one at", fn)
-			if err := util.GenerateConfigIfNeeded(fn); err != nil {
+			if err := server.GenerateConfigIfNeeded(fn); err != nil {
 				panic(err)
 			}
 		} else {
