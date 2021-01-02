@@ -21,13 +21,11 @@ type Tunnel struct {
 	Enabled bool   `json:"enabled"`
 
 	lstnr  net.Listener `json:"-"`
-	local  net.Conn     `json:"-"`
-	remote net.Conn     `json:"-"`
 	IsOpen bool         `json:"-"`
 
-	dialer Dialer
-	mu     *sync.Mutex
-	ev     event.Dispatcher
+	dialer Dialer           `json:"-"`
+	mu     *sync.Mutex      `json:"-"`
+	ev     event.Dispatcher `json:"-"`
 }
 
 // NewTunnelFromPool will create a new tunnel from the given address, remote/local ports
@@ -44,7 +42,7 @@ func NewTunnelFromPool(pool Pool, addr, remote, local, key string) (*Tunnel, err
 		Remote:  remote,
 		Enabled: true,
 		mu:      new(sync.Mutex),
-		dialer:  cl.DialerFunc(),
+		dialer:  cl.dialerFunc(),
 	}, nil
 }
 
@@ -73,7 +71,7 @@ func NewTunnelsFromConfigAndPool(pool Pool, cfg Config) ([]*Tunnel, error) {
 
 		tun := &t
 		tun.mu = new(sync.Mutex)
-		tun.dialer = cl.DialerFunc()
+		tun.dialer = cl.dialerFunc()
 		tuns = append(tuns, tun)
 	}
 
@@ -132,60 +130,74 @@ func (tun *Tunnel) Open() (err error) {
 		log.Println("Failed to open port for local listener: ", err)
 		return
 	}
+	tun.IsOpen = true
+
+	go tun.listenForConnections()
+	return nil
+}
+
+// wait for someone to connect to the port and then pass that off to be hooked up to the remote port
+func (tun *Tunnel) listenForConnections() {
 	log.Println("listening for connections on ", tun.Local)
-
-	go func() {
-		for {
-			log.Println("waiting for new connection")
-			tun.local, err = tun.lstnr.Accept()
-			if err != nil {
-				log.Println("Failed to accept listeners conn: ", err)
-			}
-
-			tun.ev.Go("log", "new connection requested to remote port "+tun.Remote)
-			tun.remote, err = tun.dialer("tcp", tun.Remote)
-			if err != nil {
-				log.Println("Failed to open port to remote: ", err)
-			}
-			tun.ev.Go("log", "new connection opened to remote port "+tun.Remote)
-
-			upDone := make(chan struct{})
-			downDone := make(chan struct{})
-
-			// Copy localConn.Reader to sshConn.Writer
-			go func() {
-				_, err := io.Copy(tun.remote, tun.local)
-				if err != nil {
-					log.Printf("io.Copy failed: %v", err)
-				}
-				close(upDone)
-			}()
-
-			// Copy sshConn.Reader to localConn.Writer
-			go func() {
-				_, err := io.Copy(tun.local, tun.remote)
-				if err != nil {
-					log.Printf("io.Copy failed: %v", err)
-				}
-				close(downDone)
-			}()
-
-			tun.IsOpen = true
-			tun.ev.Go("log", "tunnel port "+tun.Name()+" was opened, copying data across")
-			<-upDone
-			tun.ev.Go("log", "data was transferred")
-			tun.remote.Close()
-			tun.local.Close()
-			<-downDone
-			// tun.IsOpen = false
-			// tun.ev.Go("log", "tunnel port "+tun.Name()+" was closed")
-			// tun.Close()
-
+	for {
+		log.Println("waiting for new connection")
+		local, err := tun.lstnr.Accept() // TODO: will this close when the listener is closed?
+		if err != nil {
+			log.Println("Failed to accept listeners conn: ", err)
 		}
+
+		go tun.handleConnection(local)
+	}
+}
+
+// someone requested data from the local port, so use the connection to them and hook it
+// to the remote ports connection
+func (tun *Tunnel) handleConnection(local net.Conn) {
+	tun.ev.Go("log", "new connection requested to remote port "+tun.Remote)
+	remote, err := tun.dialer("tcp", tun.Remote)
+	if err != nil {
+		log.Println("Failed to open port to remote: ", err)
+		local.Close()
+		return
+	}
+	tun.ev.Go("log", "new connection opened to remote port "+tun.Remote)
+
+	upDone := make(chan struct{})
+	downDone := make(chan struct{})
+
+	// Copy localConn.Reader to sshConn.Writer
+	go func() {
+		_, err := io.Copy(remote, local)
+		if err != nil {
+			log.Printf("io.Copy failed: %v", err)
+		}
+		close(upDone)
 	}()
 
-	tun.IsOpen = true
-	return nil
+	// Copy sshConn.Reader to localConn.Writer
+	go func() {
+		_, err := io.Copy(local, remote)
+		if err != nil {
+			log.Printf("io.Copy failed: %v", err)
+		}
+		close(downDone)
+	}()
+
+	tun.ev.Go("log", "tunnel port "+tun.Name()+" was opened, copying data across")
+
+	defer local.Close()
+	defer remote.Close()
+	defer tun.ev.Go("log", "data transfer complete")
+
+	for {
+		select {
+		// TODO: add a context done check here somehow?  Otherwise the connection may persist or hold up the closing of the client
+		case <-downDone:
+			return
+		case <-upDone:
+			return
+		}
+	}
 }
 
 // Name will return the name of this tunnel
@@ -198,14 +210,5 @@ func (tun *Tunnel) Close() {
 	if tun.lstnr != nil {
 		tun.lstnr.Close()
 	}
-
-	if tun.local != nil {
-		go tun.local.Close()
-	}
-
-	if tun.remote != nil {
-		go tun.remote.Close()
-	}
-
 	tun.IsOpen = false
 }
