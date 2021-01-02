@@ -108,7 +108,7 @@ into your `~/.ssh/authorized_keys` file on that server.
 
 - [ ] allow using config file in the mole client
 - [ ] specify a tunnel with the standard SSH format (e.g. `3344:localhost:3301`)
-- [ ] for single port forward command, use default SSH key if none specified (e.g. `~/.ssh/id_rsa`)
+- [x] for single port forward command, use default SSH key if none specified (e.g. `~/.ssh/id_rsa`)
 - [ ] clean up logging
 - [ ] add interactive client acceptance
 - [ ] add host key checking for clients
