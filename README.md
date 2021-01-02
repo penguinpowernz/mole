@@ -106,6 +106,8 @@ into your `~/.ssh/authorized_keys` file on that server.
 
 ## Todo
 
+- [ ] add debian package for armhf
+- [ ] add debian package for amd64
 - [ ] allow using config file in the mole client
 - [ ] specify a tunnel with the standard SSH format (e.g. `3344:localhost:3301`)
 - [x] for single port forward command, use default SSH key if none specified (e.g. `~/.ssh/id_rsa`)
@@ -114,3 +116,4 @@ into your `~/.ssh/authorized_keys` file on that server.
 - [ ] add host key checking for clients
 - [ ] allow generating server config in a client config file and vice versa
 - [ ] add remote port forwarding
+- [ ] some kind of statistics or status for the client and server
