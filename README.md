@@ -113,7 +113,7 @@ into your `~/.ssh/authorized_keys` file on that server.
 - [x] specify a tunnel with the standard SSH format at command line (e.g. `3344:localhost:3301`)
 - [x] for single port forward command, use default SSH key if none specified (e.g. `~/.ssh/id_rsa`)
 - [ ] clean up logging
-- [ ] add interactive client acceptance
+- [x] add interactive client acceptance
 - [ ] add host key checking for clients
 - [ ] allow generating server config in a client config file and vice versa
 - [ ] add remote port forwarding

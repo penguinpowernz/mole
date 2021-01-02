@@ -12,15 +12,20 @@ import (
 	"time"
 
 	"github.com/AlexanderGrom/go-event"
+	"github.com/penguinpowernz/mole/internal/app"
 	"github.com/penguinpowernz/mole/internal/util"
 	"github.com/penguinpowernz/mole/pkg/tunnel/server"
 )
 
+var svr *server.Server
+
 func main() {
 	var cfgFile, generateConfig, port string
+	var interactiveAccept bool
 	flag.StringVar(&generateConfig, "g", "", "generate a new config file to the given location")
 	flag.StringVar(&cfgFile, "c", "", "the config file to use")
 	flag.StringVar(&port, "p", "", "the port to serve the server on")
+	flag.BoolVar(&interactiveAccept, "i", false, "interactively accept public keys (useful for setting up)")
 	flag.Parse()
 
 	if generateConfig != "" {
@@ -43,7 +48,13 @@ func main() {
 	events := event.New()
 	logEvents(events)
 
-	go runServer(ctx, cfg, events)
+	svr := server.NewServer(cfg, events)
+	go runServer(ctx, cfg, svr)
+
+	if interactiveAccept {
+		app.InteractivelyAcceptPublicKeys(svr, cfg)
+		return
+	}
 
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc,
@@ -61,8 +72,7 @@ func main() {
 	<-ctx.Done()
 }
 
-func runServer(ctx context.Context, cfg *server.Config, events event.Dispatcher) {
-	svr := server.NewServer(cfg, events)
+func runServer(ctx context.Context, cfg *server.Config, svr *server.Server) {
 	for {
 		log.Println("starting server on port", cfg.ListenPort)
 		svr.ListenAndServe(ctx)
