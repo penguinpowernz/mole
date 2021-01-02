@@ -12,7 +12,7 @@ import (
 	"syscall"
 
 	"github.com/AlexanderGrom/go-event"
-	"github.com/penguinpowernz/eztunnel/tunnel"
+	"github.com/penguinpowernz/eztunnel/pkg/tunnel"
 )
 
 func main() {
