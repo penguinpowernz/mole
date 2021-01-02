@@ -13,8 +13,9 @@ type Config struct {
 	Filename       string   `json:"-"`
 	AuthorizedKeys []string `json:"authorized_keys"`
 	RunServer      bool     `json:"run_server"`
+	Connect        bool     `json:"connect"`
 	ListenPort     string   `json:"listen_port"`
-	Tunnels        []Tunnel `json:"Tunnels"`
+	Tunnels        []Tunnel `json:"tunnels"`
 	HostKey        string   `json:"host_key"`
 	PublicKey      string   `json:"public_key"`
 	PrivateKey     string   `json:"private_key"`

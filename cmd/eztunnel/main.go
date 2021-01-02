@@ -1,27 +1,30 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/AlexanderGrom/go-event"
+	"github.com/penguinpowernz/eztunnel/internal/app"
+	"github.com/penguinpowernz/eztunnel/internal/util"
 	eztunnel "github.com/penguinpowernz/eztunnel/pkg"
 )
 
 func main() {
 	var cfgFile string
-	var daemonize bool
+	var daemonize, noListen, noConnect bool
 	flag.StringVar(&cfgFile, "c", "config.yml", "the config file to use")
 	flag.BoolVar(&daemonize, "d", false, "daemonize using the given config")
+	flag.BoolVar(&noListen, "no-listen", false, "override config file to not run server")
+	flag.BoolVar(&noConnect, "no-connect", false, "override config file to not connect to any servers")
 	flag.Parse()
 
-	if err := generateConfigIfNeeded(cfgFile); err != nil {
+	if err := util.GenerateConfigIfNeeded(cfgFile); err != nil {
 		panic(err)
 	}
 
@@ -30,23 +33,29 @@ func main() {
 		log.Fatal("Failed to create session: ", err)
 	}
 
-	app := appMgr{cfg: cfg}
-
-	if cfg.RunServer {
-		go app.startServer()
-		time.Sleep(time.Second / 5)
-	}
-
-	go app.startTunnels()
-	defer app.stopTunnels()
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	events := event.New()
+	app := app.New(ctx, cfg, events)
+	logr := cachedLogger{events: events, enabled: !daemonize}
+	logr.Listen()
+
+	if cfg.RunServer && !noListen {
+		go app.StartServer()
+		time.Sleep(time.Second / 5)
+	}
+
+	if cfg.Connect && !noConnect {
+		go app.StartTunnels()
+	}
+
 	if !daemonize {
-		fmt.Println("Push enter to show the menu, otherwise logs will be printed")
-		bufio.NewReader(os.Stdin).ReadBytes('\n')
-		app.showMenu()
+		util.PrintLogsUntilEnter()
+		go func() {
+			app.ShowMenu()
+			cancel()
+		}()
 	}
 
 	sigc := make(chan os.Signal, 1)
@@ -63,7 +72,4 @@ func main() {
 	}()
 
 	<-ctx.Done()
-	if app.svrIsRunning {
-		app.svrStop()
-	}
 }

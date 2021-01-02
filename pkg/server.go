@@ -6,36 +6,38 @@ import (
 	"log"
 	"net"
 
+	"github.com/AlexanderGrom/go-event"
 	"github.com/gliderlabs/ssh"
 	gossh "golang.org/x/crypto/ssh"
 )
 
 type Server struct {
 	*ssh.Server
-	cfg *Config
+	cfg    *Config
+	events event.Dispatcher
 }
 
-func (svr *Server) ListenAndServe(ctx context.Context) {
-	go func() {
-		fmt.Println("ERROR:", svr.Server.ListenAndServe())
-		svr.Close()
-	}()
-	<-ctx.Done()
-	svr.Close()
+func NewServer(cfg *Config, events event.Dispatcher) *Server {
+	svr := &Server{cfg: cfg, events: events}
+	svr.buildSSHServer()
+
+	svr.SetOption(ssh.WrapConn(func(ctx ssh.Context, conn net.Conn) net.Conn {
+		svr.events.Go("log", fmt.Sprintf("New connection from %s", conn.RemoteAddr().String()))
+		return conn
+	}))
+
+	svr.SetOption(ssh.PublicKeyAuth(svr.IsKeyAuthorized))
+	svr.SetOption(ssh.HostKeyPEM([]byte(cfg.HostKey)))
+	svr.SetOption(ssh.NoPty())
+
+	return svr
 }
 
-func (svr *Server) IsKeyAuthorized(ctx ssh.Context, key ssh.PublicKey) bool {
-	fmt.Printf("incoming authentication req for %s from %s", ctx.User(), ctx.RemoteAddr().String())
-	allowed, _, _, _, _ := ssh.ParseAuthorizedKey(svr.cfg.AuthorizedKeyBytes())
-	return ssh.KeysEqual(key, allowed)
-}
-
-func NewServer(cfg *Config) *Server {
+func (svr *Server) buildSSHServer() {
 	forwardHandler := &ssh.ForwardedTCPHandler{}
 
-	svr := &Server{cfg: cfg}
-	server := ssh.Server{
-		Addr: cfg.ListenPort,
+	svr.Server = &ssh.Server{
+		Addr: svr.cfg.ListenPort,
 		LocalPortForwardingCallback: ssh.LocalPortForwardingCallback(func(ctx ssh.Context, dhost string, dport uint32) bool {
 			log.Println("Accepted forward", dhost, dport, "from", ctx.RemoteAddr().String())
 			return true
@@ -70,18 +72,22 @@ func NewServer(cfg *Config) *Server {
 			},
 		},
 	}
+}
 
-	svr.Server = &server
-	svr.SetOption(ssh.PublicKeyAuth(svr.IsKeyAuthorized))
+func (svr *Server) ListenAndServe(ctx context.Context) {
+	go func() {
+		err := svr.Server.ListenAndServe()
+		svr.events.Go("log", "ERROR: "+err.Error())
+		svr.Close()
+	}()
+	<-ctx.Done()
+	svr.Close()
+}
 
-	server.SetOption(ssh.WrapConn(func(ctx ssh.Context, conn net.Conn) net.Conn {
-		log.Printf("New connection from %s", conn.RemoteAddr().String())
-		return conn
-	}))
-
-	server.SetOption(ssh.HostKeyPEM([]byte(cfg.HostKey)))
-
-	server.SetOption(ssh.NoPty())
-
-	return svr
+func (svr *Server) IsKeyAuthorized(ctx ssh.Context, key ssh.PublicKey) bool {
+	svr.events.Go("log", fmt.Sprintf("incoming authentication req for %s from %s", ctx.User(), ctx.RemoteAddr().String()))
+	allowed, _, _, _, _ := ssh.ParseAuthorizedKey(svr.cfg.AuthorizedKeyBytes())
+	log.Printf("keychekc %s\n", string(gossh.MarshalAuthorizedKey(key)))
+	log.Printf("%s\n", string(svr.cfg.AuthorizedKeyBytes()))
+	return ssh.KeysEqual(key, allowed)
 }

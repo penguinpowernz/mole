@@ -1,16 +1,23 @@
 package eztunnel
 
-import "context"
+import (
+	"context"
+	"log"
 
-func NewTunnelManager(cfg *Config) *TunnelManager {
+	"github.com/AlexanderGrom/go-event"
+)
+
+func NewTunnelManager(cfg *Config, events event.Dispatcher) *TunnelManager {
 	tm := new(TunnelManager)
 	tm.cfg = cfg
+	tm.events = events
 	return tm
 }
 
 type TunnelManager struct {
-	cfg *Config
-	cls []*Client
+	cfg    *Config
+	events event.Dispatcher
+	cls    []*Client
 }
 
 func (mgr *TunnelManager) Tunnels() (tuns []*Tunnel) {
@@ -34,17 +41,28 @@ func (mgr *TunnelManager) CloseAll() {
 }
 
 func (mgr *TunnelManager) OpenAll() {
+	mgr.events.Go("log", "opening all tunnels")
 	mgr.OpenTunnels(mgr.cfg.Tunnels...)
 }
 
 func (mgr *TunnelManager) OpenTunnels(tuns ...Tunnel) {
 	for _, tun := range tuns {
 		if !mgr.HaveClient(tun.Address) {
-			mgr.AddClient(tun.Address)
+			// log.Println("adding new client", tun.Address)
+			mgr.events.Go("log", "connecting to new client @ "+tun.Address)
+			if err := mgr.AddClient(tun.Address); err != nil {
+				mgr.events.Go("error", err)
+			}
 		}
 
 		for _, cl := range mgr.cls {
-			cl.OpenTunnel(tun)
+			if err := cl.OpenTunnel(tun); err != nil {
+				log.Printf("failed to open tunnel %s : %s: %s", tun.Address, tun.Name(), err)
+				mgr.events.Go("log", "failed to open tunnel %s : %s: %s", tun.Address, tun.Name(), err)
+			} else {
+				log.Printf("connected tunnel %s : %s", tun.Address, tun.Name())
+				mgr.events.Go("log", "connected tunnel %s : %s", tun.Address, tun.Name())
+			}
 		}
 	}
 }

@@ -4,6 +4,9 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
+
+	"github.com/AlexanderGrom/go-event"
 )
 
 type Tunnel struct {
@@ -16,9 +19,55 @@ type Tunnel struct {
 	local  net.Conn     `json:"-"`
 	remote net.Conn     `json:"-"`
 	IsOpen bool         `json:"-"`
+
+	mu *sync.Mutex
+	ev event.Dispatcher
+}
+
+func (tun *Tunnel) Listen(events event.Dispatcher) {
+	tun.ev = events
+	events.On("client.connected", func(cl *Client) error {
+		if cl.addr == tun.Address {
+			if tun.Enabled {
+				if err := tun.Open(cl.ssh.Dial); err != nil {
+					events.Go("error", err)
+				}
+			}
+		}
+		return nil
+	})
+
+	events.On("tunnel.disable", func(t Tunnel) error {
+		if tun.Name() == t.Name() {
+			tun.Close()
+			tun.Enabled = false
+		}
+		return nil
+	})
+
+	events.On("tunnel.enable", func(t Tunnel) error {
+		if tun.Name() == t.Name() {
+			tun.Enabled = true
+			event.Go("connect.client", tun.Address)
+		}
+		return nil
+	})
+
+	event.Go("connect.client", tun.Address)
 }
 
 func (tun *Tunnel) Open(dialer Dialer) (err error) {
+	if tun.mu == nil {
+		tun.mu = new(sync.Mutex)
+	}
+
+	tun.mu.Lock()
+	defer tun.mu.Unlock()
+
+	if tun.IsOpen {
+		return nil
+	}
+
 	tun.lstnr, err = net.Listen("tcp", tun.Local)
 	if err != nil {
 		log.Println("Failed to open port for local listener: ", err)
@@ -46,7 +95,6 @@ func (tun *Tunnel) Open(dialer Dialer) (err error) {
 				if err != nil {
 					log.Printf("io.Copy failed: %v", err)
 				}
-				log.Println("done with copy")
 				close(upDone)
 			}()
 
@@ -56,13 +104,15 @@ func (tun *Tunnel) Open(dialer Dialer) (err error) {
 				if err != nil {
 					log.Printf("io.Copy failed: %v", err)
 				}
-				log.Println("done with copy2")
 				close(downDone)
 			}()
 
+			tun.IsOpen = true
+			tun.ev.Go("log", "tunnel port "+tun.Name()+"was opened")
 			<-upDone
 			<-downDone
 			tun.IsOpen = false
+			tun.ev.Go("log", "tunnel port "+tun.Name()+"was closed")
 			tun.Close()
 		}
 	}()

@@ -1,16 +1,61 @@
 package eztunnel
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"sync"
+	"time"
 
+	"github.com/AlexanderGrom/go-event"
 	"golang.org/x/crypto/ssh"
 )
 
+type ClientManager struct {
+	clients []*Client
+	events  event.Dispatcher
+	cfg     *Config
+}
+
+func (mgr ClientManager) Listen() {
+	mgr.events.On("connect.client", func(addr string) error {
+
+		cl, ok := mgr.FindClientByAddr(addr)
+		if ok {
+			mgr.events.Go("client.connected", cl)
+			return nil
+		}
+
+		cl, err := NewClient(addr, mgr.cfg.PrivateKey)
+		if err != nil {
+			return err
+		}
+
+		if err = cl.Connect(); err != nil {
+			return err
+		}
+
+		mgr.events.Go("client.connected", cl)
+
+		mgr.clients = append(mgr.clients, cl)
+		return nil
+	})
+
+}
+
+func (mgr *ClientManager) FindClientByAddr(addr string) (*Client, bool) {
+	for _, cl := range mgr.clients {
+		if cl.addr == addr {
+			return cl, true
+		}
+	}
+	return nil, false
+}
+
 func NewClient(addr string, _privkey string) (*Client, error) {
 	sshcfg := &ssh.ClientConfig{
-		User: "username",
-		// HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		User:            os.Getenv("USER") + ":" + func() string { s, _ := os.Hostname(); return s }(),
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		// HostKeyCallback: ssh.FixedHostKey(hostKey),
 	}
 
@@ -22,16 +67,19 @@ func NewClient(addr string, _privkey string) (*Client, error) {
 	sshcfg.Auth = append(sshcfg.Auth, ssh.PublicKeys(privkey))
 
 	return &Client{
+		addr:   addr,
 		sshcfg: sshcfg,
 		mu:     new(sync.Mutex),
+		tuns:   map[string]*Tunnel{},
 	}, nil
 }
 
 type Client struct {
-	addr   string
-	ssh    *ssh.Client
-	sshcfg *ssh.ClientConfig
-	tuns   map[string]*Tunnel
+	addr      string
+	ssh       *ssh.Client
+	sshcfg    *ssh.ClientConfig
+	tuns      map[string]*Tunnel
+	connected bool
 
 	mu *sync.Mutex
 }
@@ -91,6 +139,39 @@ func (cl *Client) Close() (err error) {
 	}
 
 	return cl.ssh.Close()
+}
+
+func (cl *Client) ConnectWithContext(ctx context.Context, events event.Dispatcher) {
+	deadChan := make(chan bool, 1)
+	t := time.NewTicker(time.Second * 5)
+
+	for {
+		select {
+		case <-t.C:
+			if !cl.connected {
+				if err := cl.Connect(); err != nil {
+					events.Go("error", fmt.Errorf("failed to connect to %s: %s", cl.addr, err))
+					continue
+				}
+
+				go func() {
+					if err := cl.ssh.Wait(); err != nil {
+						events.Go("error", fmt.Errorf("client %s disconnected: %s", cl.addr, err))
+					}
+					deadChan <- true
+				}()
+
+				events.Go("client.connected", cl)
+			}
+		case <-ctx.Done():
+			events.Go("log", fmt.Errorf("context done for client %s", cl.addr))
+			cl.Close()
+			return
+
+		case <-deadChan:
+
+		}
+	}
 }
 
 func (cl *Client) Connect() (err error) {
