@@ -40,7 +40,7 @@ func NewTunnelFromPool(pool Pool, addr, remote, local, key string) (*Tunnel, err
 	}
 
 	err := t.furnish(pool, key)
-	return nil, err
+	return t, err
 }
 
 // NewTunnel will create a new tunnel from the given address, remote/local ports

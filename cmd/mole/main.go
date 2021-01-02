@@ -65,7 +65,7 @@ func main() {
 	}
 
 	for _, tun := range tuns {
-		log.Println("opening tunnel to", tun.Address, tun.Remote, "for local port", tun.Local)
+		log.Println("opening tunnel @", tun.Address, ":", tun.Local, "->", tun.Remote)
 		tun, err := tunnel.NewTunnelFromPool(pool, tun.Address, tun.Remote, tun.Local, cfg.PrivateKey)
 		if err != nil {
 			panic(err)
