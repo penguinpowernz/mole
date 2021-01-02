@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/ghodss/yaml"
-	"github.com/penguinpowernz/eztunnel/internal/util"
+	"github.com/penguinpowernz/mole/internal/util"
 )
 
 type Config struct {

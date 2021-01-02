@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/AlexanderGrom/go-event"
-	"github.com/penguinpowernz/eztunnel/internal/util"
-	"github.com/penguinpowernz/eztunnel/pkg/tunnel/server"
+	"github.com/penguinpowernz/mole/internal/util"
+	"github.com/penguinpowernz/mole/pkg/tunnel/server"
 )
 
 func main() {
