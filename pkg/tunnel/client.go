@@ -68,6 +68,12 @@ func (cl *Client) Close() (err error) {
 // ConnectWithContext will connect using the given context to signal when to disconnect or stop
 // trying to connect.  This will loop to continuously attempt to connect to the tunnel
 func (cl *Client) ConnectWithContext(ctx context.Context, events event.Dispatcher) {
+	cl.mu.Lock()
+	defer cl.mu.Unlock()
+	if cl.connected {
+		return
+	}
+
 	t := time.NewTicker(time.Second * 5)
 
 	for {
