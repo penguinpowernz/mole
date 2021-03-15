@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/AlexanderGrom/go-event"
 	"github.com/penguinpowernz/mole/internal/util"
@@ -17,11 +18,12 @@ import (
 )
 
 func main() {
-	var addr, remote, local, generateConfig, localTunnel, keyfile, cfgFile string
+	var addr, remote, local, generateConfig, localTunnel, remoteTunnel, keyfile, cfgFile string
 	flag.StringVar(&addr, "a", "", "the address to connect to")
 	flag.StringVar(&remote, "r", "", "the remote port")
 	flag.StringVar(&local, "l", "", "the local port")
 	flag.StringVar(&localTunnel, "L", "", "local port forward in SSH format")
+	flag.StringVar(&remoteTunnel, "R", "", "remote port forward in SSH format")
 	flag.StringVar(&keyfile, "i", "", "identity file (private key) to use, or override config with")
 	flag.StringVar(&cfgFile, "c", "", "the config file to use")
 	flag.StringVar(&generateConfig, "g", "", "generate a new config file to the given location")
@@ -59,23 +61,21 @@ func main() {
 		cfg = loadConfig(cfgFile, keyfile)
 	}
 
-	tuns, err := tunnel.NewTunnelsFromConfigAndPool(pool, *cfg)
+	if err := tunnel.PopulatePool(pool, *cfg); err != nil {
+		panic(err)
+	}
+
+	tuns, err := tunnel.BuildTunnels(pool, *cfg)
 	if err != nil {
 		panic(err)
 	}
 
 	for _, tun := range tuns {
 		log.Println("opening tunnel @", tun.Address, ":", tun.Local, "->", tun.Remote)
-		tun, err := tunnel.NewTunnelFromPool(pool, tun.Address, tun.Remote, tun.Local, cfg.PrivateKey)
-		if err != nil {
-			panic(err)
-		}
-
-		if err := tun.Open(); err != nil {
+		if err := tun.Open(ctx); err != nil {
 			panic(err)
 		}
 		log.Println("opened tunnel")
-		defer tun.Close()
 		tun.Listen(events)
 	}
 
@@ -94,6 +94,7 @@ func main() {
 
 	log.Println("waiting for quit signal")
 	<-ctx.Done()
+	time.Sleep(time.Second / 2)
 }
 
 func makeSingleTunnelConfig(a, r, l, k string) *tunnel.Config {
@@ -104,7 +105,7 @@ func makeSingleTunnelConfig(a, r, l, k string) *tunnel.Config {
 	log.Printf("found keyfile at: %s", k)
 
 	return &tunnel.Config{
-		PrivateKey: string(data),
+		Keys: []tunnel.KeyPair{{Private: string(data), Address: a}},
 		Tunnels: []tunnel.Tunnel{
 			{Address: a, Local: l, Remote: r, Enabled: true},
 		},
@@ -131,7 +132,7 @@ func loadConfig(specifiedFilename, keyfile string) *tunnel.Config {
 	}
 
 	if keyfile != "" {
-		cfg.PrivateKey = privateKeyText(keyfile)
+		cfg.Keys = append(cfg.Keys, tunnel.KeyPair{Private: privateKeyText(keyfile), Address: "*"})
 	}
 
 	return cfg
@@ -179,8 +180,5 @@ func logEvents(events event.Dispatcher) {
 
 func fileExists(f string) bool {
 	_, err := os.Stat(f)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
