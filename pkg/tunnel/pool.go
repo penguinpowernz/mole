@@ -47,11 +47,29 @@ type ConnPool struct {
 	ctx     context.Context
 }
 
+func (pl *ConnPool) AddClient(addr, key string) error {
+	for _, cl := range pl.clients {
+		if cl.addr == addr {
+			return nil
+		}
+	}
+	cl, err := NewClient(addr, key)
+	if err != nil {
+		return err
+	}
+	pl.clients = append(pl.clients, cl)
+	return nil
+}
+
 // GetClient will return the client for the given addr and key
 func (pl *ConnPool) GetClient(addr, key string) (*Client, error) {
 	pl.events.Go("log", "attempting to find client for "+addr)
 	for _, cl := range pl.clients {
 		if cl.addr == addr {
+			if !cl.connected {
+				go cl.ConnectWithContext(pl.ctx, pl.events)
+				cl.WaitForConnect()
+			}
 			return cl, nil
 		}
 	}
@@ -68,4 +86,20 @@ func (pl *ConnPool) GetClient(addr, key string) (*Client, error) {
 	cl.WaitForConnect()
 	pl.events.Go("log", "connected the client for "+addr)
 	return cl, nil
+}
+
+func PopulatePool(pool Pool, cfg Config) error {
+	switch p := pool.(type) {
+	case *ConnPool:
+		for _, t := range cfg.Tunnels {
+			for _, k := range cfg.Keys {
+				if t.Address == k.Address {
+					if err := p.AddClient(k.Address, k.Private); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
 }
