@@ -11,10 +11,32 @@ import (
 
 // Config represents the config file for the tunnel client
 type Config struct {
-	Filename   string   `json:"-"`
-	Tunnels    []Tunnel `json:"tunnels"`
-	PublicKey  string   `json:"public_key"`
-	PrivateKey string   `json:"private_key"`
+	Filename string    `json:"-"`
+	Tunnels  []Tunnel  `json:"tunnels"`
+	Keys     []KeyPair `json:"keys"`
+}
+
+type KeyPair struct {
+	Address string `json:"address"`
+	Private string `json:"private"`
+	Public  string `json:"public"`
+}
+
+func (cfg Config) KeyForAddress(addr string) string {
+	def := ""
+	for _, k := range cfg.Keys {
+		if k.Address == "*" {
+			def = k.Private
+		}
+		if k.Address == addr {
+			return k.Private
+		}
+	}
+	return def
+}
+
+func (cfg Config) DefaultKey() string {
+	return cfg.KeyForAddress("*")
 }
 
 // Save will save the config to disk
@@ -43,11 +65,11 @@ func LoadConfig(fn string) (cfg *Config, err error) {
 func GenerateConfig() Config {
 	cfg := Config{}
 
-	var err error
-	cfg.PublicKey, cfg.PrivateKey, err = util.MakeSSHKeyPair()
+	pub, priv, err := util.MakeSSHKeyPair()
 	if err != nil {
 		return cfg
 	}
+	cfg.Keys = append(cfg.Keys, KeyPair{Address: "*", Private: priv, Public: pub})
 
 	return cfg
 }
