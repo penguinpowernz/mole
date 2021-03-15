@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"context"
 	"io"
 	"log"
 	"net"
@@ -115,7 +116,7 @@ func (tun *Tunnel) Listen(events event.Dispatcher) {
 
 // Open will "open" the tunnel, by listening for new connections coming into
 // the local port, and then hooking them up to the remote port on the fly
-func (tun *Tunnel) Open() (err error) {
+func (tun *Tunnel) Open(ctx context.Context) (err error) {
 	if tun.mu == nil {
 		tun.mu = new(sync.Mutex)
 	}
@@ -137,6 +138,12 @@ func (tun *Tunnel) Open() (err error) {
 	tun.IsOpen = true
 
 	go tun.listenForConnections()
+
+	go func() {
+		<-ctx.Done()
+		tun.Close()
+	}()
+
 	return nil
 }
 
