@@ -20,6 +20,7 @@ type Tunnel struct {
 	Local   string `json:"local_port"`
 	Remote  string `json:"remote_port"`
 	Enabled bool   `json:"enabled"`
+	Reverse bool   `json:"reverse"`
 
 	lstnr  net.Listener `json:"-"`
 	IsOpen bool         `json:"-"`
