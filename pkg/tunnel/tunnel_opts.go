@@ -15,13 +15,6 @@ func NewTunnelFromOpts(opts ...Option) (*Tunnel, error) {
 
 type Option func(*Tunnel) error
 
-func SSHDialer(dialer Dialer) Option {
-	return func(tun *Tunnel) error {
-		tun.dialer = dialer
-		return nil
-	}
-}
-
 func Local(bind string) Option {
 	return func(tun *Tunnel) error {
 		tun.Local = bind
@@ -43,16 +36,11 @@ func Reverse() Option {
 	}
 }
 
-func BuildTunnels(pool Pool, cfg Config) ([]*Tunnel, error) {
+func BuildTunnels(cfg Config) []*Tunnel {
 	tuns := []*Tunnel{}
 	for _, t := range cfg.Tunnels {
 		if !t.Enabled {
 			continue
-		}
-
-		cl, err := pool.GetClient(t.Address, cfg.KeyForAddress(t.Address))
-		if err != nil {
-			return tuns, err
 		}
 
 		t := &Tunnel{
@@ -60,7 +48,6 @@ func BuildTunnels(pool Pool, cfg Config) ([]*Tunnel, error) {
 			Local:   t.Local,
 			Remote:  t.Remote,
 			Reverse: t.Reverse,
-			dialer:  cl.dialerFunc(),
 			Enabled: true,
 			mu:      new(sync.Mutex),
 		}
@@ -68,5 +55,5 @@ func BuildTunnels(pool Pool, cfg Config) ([]*Tunnel, error) {
 		tuns = append(tuns, t)
 	}
 
-	return tuns, nil
+	return tuns
 }

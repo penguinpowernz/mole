@@ -3,6 +3,7 @@ package tunnel
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"sync"
 	"time"
@@ -48,6 +49,14 @@ type Client struct {
 
 func (cl *Client) dialerFunc() Dialer {
 	return cl.ssh.Dial
+}
+
+func (cl *Client) Dial(n, a string) (net.Conn, error) {
+	return cl.ssh.Dial(n, a)
+}
+
+func (cl *Client) Listen(n, a string) (net.Listener, error) {
+	return cl.ssh.Listen(n, a)
 }
 
 // WaitForConnect will block until the client is connected

@@ -65,18 +65,19 @@ func main() {
 		panic(err)
 	}
 
-	tuns, err := tunnel.BuildTunnels(pool, *cfg)
-	if err != nil {
-		panic(err)
-	}
-
-	for _, tun := range tuns {
+	for _, tun := range tunnel.BuildTunnels(*cfg) {
 		log.Println("opening tunnel @", tun.Address, ":", tun.Local, "->", tun.Remote)
-		if err := tun.Open(ctx); err != nil {
+		cl, err := pool.GetClient(tun.Address, cfg.KeyForAddress(tun.Address))
+		if err != nil {
 			panic(err)
 		}
-		log.Println("opened tunnel")
-		tun.Listen(events)
+
+		// TODO: add some persistent retrying for temporary connectivity issues
+		if err := tun.Open(ctx, cl); err != nil {
+			panic(err)
+		}
+
+		log.Println("opened tunnel ", tun.Name())
 	}
 
 	sigc := make(chan os.Signal, 1)
