@@ -31,56 +31,6 @@ type Tunnel struct {
 	ev     event.Dispatcher `json:"-"`
 }
 
-// NewTunnelFromPool will create a new tunnel from the given address, remote/local ports
-// and private key, using the given pool to obtain a client connection
-func NewTunnelFromPool(pool Pool, addr, remote, local, key string) (*Tunnel, error) {
-	t := &Tunnel{
-		Address: addr,
-		Local:   local,
-		Remote:  remote,
-		Enabled: true,
-	}
-
-	err := t.furnish(pool, key)
-	return t, err
-}
-
-// NewTunnel will create a new tunnel from the given address, remote/local ports
-// and private key, using the default global pool to obtain a client connection
-func NewTunnel(addr, remote, local, key string) (*Tunnel, error) {
-	return NewTunnelFromPool(DefaultPool, addr, remote, local, key)
-}
-
-// NewTunnelsFromConfig will create a bunch of tunnels from what is specified in
-// the given config using the default global pool to obtain a client connection
-func NewTunnelsFromConfig(cfg Config) ([]*Tunnel, error) {
-	return NewTunnelsFromConfigAndPool(DefaultPool, cfg)
-}
-
-// NewTunnelsFromConfigAndPool will create a bunch of tunnels from what is specified in
-// the given config using the given pool to obtain a client connection
-func NewTunnelsFromConfigAndPool(pool Pool, cfg Config) ([]*Tunnel, error) {
-	tuns := []*Tunnel{}
-
-	for _, t := range cfg.Tunnels {
-		tun := &t
-		tun.furnish(pool, cfg.PrivateKey)
-		tuns = append(tuns, tun)
-	}
-
-	return tuns, nil
-}
-
-func (tun *Tunnel) furnish(pool Pool, key string) error {
-	cl, err := pool.GetClient(tun.Address, key)
-	if err != nil {
-		return err
-	}
-	tun.mu = new(sync.Mutex)
-	tun.dialer = cl.dialerFunc()
-	return nil
-}
-
 // Listen will listen to event from the dispatcher
 func (tun *Tunnel) Listen(events event.Dispatcher) {
 	tun.ev = events
