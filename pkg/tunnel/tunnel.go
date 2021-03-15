@@ -80,14 +80,9 @@ func (tun *Tunnel) Open(ctx context.Context) (err error) {
 
 	tun.normalizePorts()
 
-	tun.lstnr, err = net.Listen("tcp", tun.Local)
-	if err != nil {
-		log.Println("Failed to open port for local listener: ", err)
-		return
 	}
 	tun.IsOpen = true
 
-	go tun.listenForConnections()
 
 	go func() {
 		<-ctx.Done()
@@ -97,20 +92,6 @@ func (tun *Tunnel) Open(ctx context.Context) (err error) {
 	return nil
 }
 
-// wait for someone to connect to the port and then pass that off to be hooked up to the remote port
-func (tun *Tunnel) listenForConnections() {
-	log.Println("listening for connections on ", tun.Local)
-	for {
-		log.Println("waiting for new connection")
-		local, err := tun.lstnr.Accept() // TODO: will this close when the listener is closed?
-		if err != nil {
-			log.Println("Failed to accept listeners conn: ", err)
-		}
-
-		go tun.handleConnection(local)
-	}
-}
-
 func (tun *Tunnel) normalizePorts() {
 	if tun.Remote[0] == ':' || (tun.Remote[0] != ':' && !strings.Contains(tun.Remote, ":")) {
 		tun.Remote = "localhost:" + tun.Remote
@@ -118,56 +99,6 @@ func (tun *Tunnel) normalizePorts() {
 
 	if tun.Local[0] == ':' || (tun.Local[0] != ':' && !strings.Contains(tun.Local, ":")) {
 		tun.Local = "localhost:" + tun.Local
-	}
-}
-
-// someone requested data from the local port, so use the connection to them and hook it
-// to the remote ports connection
-func (tun *Tunnel) handleConnection(local net.Conn) {
-	tun.ev.Go("log", "new connection requested to remote port "+tun.Remote)
-	remote, err := tun.dialer("tcp", tun.Remote)
-	if err != nil {
-		log.Println("Failed to open port to remote: ", err)
-		local.Close()
-		return
-	}
-	tun.ev.Go("log", "new connection opened to remote port "+tun.Remote)
-
-	upDone := make(chan struct{})
-	downDone := make(chan struct{})
-
-	// Copy localConn.Reader to sshConn.Writer
-	go func() {
-		_, err := io.Copy(remote, local)
-		if err != nil {
-			log.Printf("io.Copy failed: %v", err)
-		}
-		close(upDone)
-	}()
-
-	// Copy sshConn.Reader to localConn.Writer
-	go func() {
-		_, err := io.Copy(local, remote)
-		if err != nil {
-			log.Printf("io.Copy failed: %v", err)
-		}
-		close(downDone)
-	}()
-
-	tun.ev.Go("log", "tunnel port "+tun.Name()+" was opened, copying data across")
-
-	defer local.Close()
-	defer remote.Close()
-	defer tun.ev.Go("log", "data transfer complete")
-
-	for {
-		select {
-		// TODO: add a context done check here somehow?  Otherwise the connection may persist or hold up the closing of the client
-		case <-downDone:
-			return
-		case <-upDone:
-			return
-		}
 	}
 }
 
