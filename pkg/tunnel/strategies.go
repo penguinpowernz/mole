@@ -34,7 +34,7 @@ func RemoteStrategy(local, remote string) Strategy {
 					continue
 				}
 
-				go Bridge(upstream, downstream)
+				go Bridge(ctx, upstream, downstream)
 			}
 		}()
 
@@ -63,7 +63,7 @@ func LocalStrategy(local, remote string) Strategy {
 					continue
 				}
 
-				go Bridge(upstream, downstream)
+				go Bridge(ctx, upstream, downstream)
 			}
 		}()
 
@@ -72,7 +72,7 @@ func LocalStrategy(local, remote string) Strategy {
 	})
 }
 
-func Bridge(upstream, downstream net.Conn) {
+func Bridge(ctx context.Context, upstream, downstream net.Conn) {
 	upDone := make(chan struct{})
 	downDone := make(chan struct{})
 
@@ -99,7 +99,8 @@ func Bridge(upstream, downstream net.Conn) {
 
 	for {
 		select {
-		// TODO: add a context done check here somehow?  Otherwise the connection may persist or hold up the closing of the client
+		case <-ctx.Done():
+			return
 		case <-downDone:
 			return
 		case <-upDone:
