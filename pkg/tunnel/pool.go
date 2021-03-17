@@ -19,7 +19,6 @@ type Pool interface {
 // FakePool does not pool at all it simply creates a new client for
 // every single call
 type FakePool struct {
-	clients []*Client
 }
 
 // GetClient will create a new client everytime it is called because

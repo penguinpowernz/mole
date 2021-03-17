@@ -24,7 +24,7 @@ func NewClient(addr string, _privkey string) (*Client, error) {
 
 	privkey, err := ssh.ParsePrivateKey([]byte(_privkey))
 	if err != nil {
-		return nil, fmt.Errorf("Failed to parse key: %s", err)
+		return nil, fmt.Errorf("failed to parse key: %s", err)
 	}
 
 	sshcfg.Auth = append(sshcfg.Auth, ssh.PublicKeys(privkey))
@@ -45,10 +45,6 @@ type Client struct {
 
 	mu       *sync.Mutex
 	deadChan chan struct{}
-}
-
-func (cl *Client) dialerFunc() Dialer {
-	return cl.ssh.Dial
 }
 
 func (cl *Client) Dial(n, a string) (net.Conn, error) {
