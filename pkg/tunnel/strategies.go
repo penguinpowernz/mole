@@ -7,15 +7,15 @@ import (
 	"net"
 )
 
-type Strategy func(context.Context) error
+type Strategy func(context.Context, SSHConn) error
 
 type SSHConn interface {
 	Dial(string, string) (net.Conn, error)
 	Listen(string, string) (net.Listener, error)
 }
 
-func RemoteStrategy(conn SSHConn, local, remote string) Strategy {
-	return Strategy(func(ctx context.Context) error {
+func RemoteStrategy(local, remote string) Strategy {
+	return Strategy(func(ctx context.Context, conn SSHConn) error {
 		l, err := conn.Listen("tcp", remote)
 		if err != nil {
 			return err
@@ -43,8 +43,8 @@ func RemoteStrategy(conn SSHConn, local, remote string) Strategy {
 	})
 }
 
-func LocalStrategy(conn SSHConn, local, remote string) Strategy {
-	return Strategy(func(ctx context.Context) error {
+func LocalStrategy(local, remote string) Strategy {
+	return Strategy(func(ctx context.Context, conn SSHConn) error {
 		l, err := net.Listen("tcp", local)
 		if err != nil {
 			return err

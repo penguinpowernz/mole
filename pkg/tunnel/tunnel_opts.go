@@ -2,17 +2,6 @@ package tunnel
 
 import "sync"
 
-func NewTunnelFromOpts(opts ...Option) (*Tunnel, error) {
-	t := &Tunnel{}
-	for _, opt := range opts {
-		if err := opt(t); err != nil {
-			return t, err
-		}
-	}
-
-	return t, nil
-}
-
 type Option func(*Tunnel) error
 
 func Local(bind string) Option {

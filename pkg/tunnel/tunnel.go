@@ -2,6 +2,7 @@ package tunnel
 
 import (
 	"context"
+	"errors"
 	"net"
 	"strings"
 	"sync"
@@ -21,12 +22,35 @@ type Tunnel struct {
 
 	IsOpen bool `json:"-"`
 
-	mu *sync.Mutex `json:"-"`
+	mu       *sync.Mutex `json:"-"`
+	strategy Strategy
+}
+
+func NewTunnelFromOpts(opts ...Option) (*Tunnel, error) {
+	t := &Tunnel{}
+	for _, opt := range opts {
+		if err := opt(t); err != nil {
+			return t, err
+		}
+	}
+
+	if t.strategy == nil {
+		t.strategy = LocalStrategy(t.Local, t.Remote)
+		if t.Reverse {
+			t.strategy = RemoteStrategy(t.Local, t.Remote)
+		}
+	}
+
+	return t, nil
 }
 
 // Open will "open" the tunnel, by listening for new connections coming into
 // the local port, and then hooking them up to the remote port on the fly
 func (tun *Tunnel) Open(ctx context.Context, cl SSHConn) (err error) {
+	if tun.strategy == nil {
+		return errors.New("no strategy added to tunnel")
+	}
+
 	if tun.mu == nil {
 		tun.mu = new(sync.Mutex)
 	}
@@ -40,14 +64,9 @@ func (tun *Tunnel) Open(ctx context.Context, cl SSHConn) (err error) {
 
 	tun.normalizePorts()
 
-	strategy := LocalStrategy(cl, tun.Local, tun.Remote)
-	if tun.Reverse {
-		strategy = RemoteStrategy(cl, tun.Local, tun.Remote)
-	}
-
 	doneChan := make(chan bool)
 	go func() {
-		_ = strategy(ctx) // TODO: print the error
+		_ = tun.strategy(ctx, cl) // TODO: print the error
 		close(doneChan)
 	}()
 
