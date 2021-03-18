@@ -42,7 +42,7 @@ The client can specify the tunnel to run:
     mole -r 3000 -l 3000 -a 192.168.1.100:222 -i ~/.ssh/id_rsa
     mole -r 3000 -l 3000 -a 192.168.1.100:22 -i ~/.ssh/id_rsa             // connect to a normal SSH server
     mole -c mole.yml                                                      // TODO: use the tunnels and private key from config file
-    mole -lt 3000:localhost:3000 -a 192.168.1.100:222  -i ~/.ssh/id_rsa   // TODO: local port forward using the typical SSH format
+    mole -lt 3000:localhost:3000 -a 192.168.1.100:222  -i ~/.ssh/id_rsa
     mole -rt :22:localhost:33066 -a 192.168.1.100:222  -i ~/.ssh/id_rsa   // TODO: remote port forward using the typical SSH format
 
 ## Config File
