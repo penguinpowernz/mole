@@ -87,11 +87,15 @@ as any tunnels that should be connected.
         local:    "80"
         remote:   "172.31.1.1:80"
         reverse:  true
+      - address:  192.168.1.100:222       # the same but using the SSH port forward definition
+        L:        "172.31.1.1:80:localhost:80"
       - address:  jumpbox.example.com:22  # poor mans dyndns, turn your cloud server into a jumpbox for your home machine
         local:    22
         remote:   0.0.0.0:2222
         reverse:  true
         disabled: true
+      - address:  jumpbox2.example.com:22 # poor mans dyndns, but using the reverse port forward definition
+        R:        "0.0.0.0:2222:localhost:22"
 
 So in order to connect the client to a normal SSH server, simply copy your public key
 into your `~/.ssh/authorized_keys` file on that server.
@@ -101,7 +105,7 @@ into your `~/.ssh/authorized_keys` file on that server.
 - [ ] add debian package for armhf
 - [ ] add debian package for amd64
 - [x] allow using config file in the mole client
-- [ ] specify a tunnel with the standard SSH format (e.g. `3344:localhost:3301`)
+- [x] specify a tunnel with the standard SSH format (e.g. `3344:localhost:3301`)
 - [x] specify a tunnel with the standard SSH format at command line (e.g. `3344:localhost:3301`)
 - [x] for single port forward command, use default SSH key if none specified (e.g. `~/.ssh/id_rsa`)
 - [ ] clean up logging
@@ -111,3 +115,4 @@ into your `~/.ssh/authorized_keys` file on that server.
 - [x] add remote port forwarding
 - [ ] some kind of statistics or status for the client and server
 - [ ] test that gateway ports actually work by specifying 0.0.0.0 as the bind address
+- [ ] use moled to configure the local users `~/.ssh` directory

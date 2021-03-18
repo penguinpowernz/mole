@@ -2,6 +2,7 @@ package tunnel
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net"
 	"strings"
@@ -14,11 +15,13 @@ type Dialer func(string, string) (net.Conn, error)
 // Tunnel represents the tunnel as it appears in the config, but
 // as an object that will do the actual tunnel connection
 type Tunnel struct {
-	Address string `json:"address"`
-	Local   string `json:"local_port"`
-	Remote  string `json:"remote_port"`
-	Reverse bool   `json:"reverse"`
+	Address    string `json:"address"`
+	Local      string `json:"local_port"`
+	Remote     string `json:"remote_port"`
 	Disabled   bool   `json:"disabled"`
+	Reverse    bool   `json:"reverse"`
+	ReverseDef string `json:"R"`
+	LocalDef   string `json:"L"`
 
 	IsOpen bool `json:"-"`
 
@@ -43,6 +46,29 @@ func NewTunnelFromOpts(opts ...Option) (*Tunnel, error) {
 	}
 
 	return t, nil
+}
+
+func (tun *Tunnel) UnmarshalJSON(data []byte) error {
+	if err := json.Unmarshal(data, tun); err != nil {
+		return err
+	}
+
+	if tun.LocalDef != "" {
+		if err := PFD(tun.LocalDef)(tun); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if tun.ReverseDef != "" {
+		if err := PFD(tun.ReverseDef)(tun); err != nil {
+			return err
+		}
+		tun.Reverse = true
+		return nil
+	}
+
+	return nil
 }
 
 // Open will "open" the tunnel, by listening for new connections coming into
