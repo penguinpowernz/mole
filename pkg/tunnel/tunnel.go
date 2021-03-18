@@ -128,5 +128,13 @@ func (tun *Tunnel) normalizePorts() {
 
 // Name will return the name of this tunnel
 func (tun *Tunnel) Name() string {
-	return tun.Local + ":" + tun.Remote
+	return strings.ReplaceAll(tun.String(), " ", "")
+}
+
+func (tun *Tunnel) String() string {
+	dir := "-->"
+	if tun.Reverse {
+		dir = "<--"
+	}
+	return fmt.Sprintf("%50s [    %30s  %s  %-30s     ]", tun.Address, tun.Local, dir, tun.Remote)
 }

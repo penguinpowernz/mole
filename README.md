@@ -45,6 +45,13 @@ The client can specify the tunnel to run:
     mole -lt 3000:localhost:3000 -a 192.168.1.100:222  -i ~/.ssh/id_rsa
     mole -rt :22:localhost:33066 -a 192.168.1.100:222  -i ~/.ssh/id_rsa   // TODO: remote port forward using the typical SSH format
 
+You can dump the currently connected tunnels by calling kill on the process ID like so: `kill -USR1 <pid>`:
+
+                                     192.168.1.100:222 [                 127.0.0.1:4222 --> 127.0.0.1:4222                 ]
+                                     192.168.1.100:222 [                   localhost:80 <-- 172.31.1.1:80                  ]
+                                     192.168.1.100:222 [                 localhost:8080 <-- 172.31.1.1:8080                ]
+                               jumpbox2.example.com:22 [                   localhost:22 <-- 0.0.0.0:2222                   ]
+
 ## Config File
 
 ### Server
@@ -113,6 +120,8 @@ into your `~/.ssh/authorized_keys` file on that server.
 - [x] add host key checking for clients
 - [ ] allow generating server config in a client config file and vice versa
 - [x] add remote port forwarding
-- [ ] some kind of statistics or status for the client and server
+- [x] some kind of statistics or status for the client
+- [ ] some kind of statistics or status for the server
 - [ ] test that gateway ports actually work by specifying 0.0.0.0 as the bind address
 - [ ] use moled to configure the local users `~/.ssh` directory
+- [ ] add some persistent retrying for temporary connectivity issues

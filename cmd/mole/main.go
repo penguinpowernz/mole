@@ -65,7 +65,8 @@ func main() {
 		panic(err)
 	}
 
-	for _, tun := range tunnel.BuildTunnels(*cfg) {
+	tuns := tunnel.BuildTunnels(*cfg)
+	for _, tun := range tuns {
 		log.Println("opening tunnel @", tun.Address, ":", tun.Local, "->", tun.Remote)
 		cl, err := pool.GetClient(tun.Address, cfg.KeyForAddress(tun.Address).Private)
 		if err != nil {
@@ -80,8 +81,19 @@ func main() {
 		log.Println("opened tunnel ", tun.Name())
 	}
 
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc,
+	// USR1 will dump stats
+	sigusr1 := make(chan os.Signal, 1)
+	signal.Notify(sigusr1, syscall.SIGUSR1)
+	go func() {
+		for {
+			<-sigusr1
+			dumpStats(tuns)
+		}
+	}()
+
+	// any of these signals will do a graceful exit
+	sigexit := make(chan os.Signal, 1)
+	signal.Notify(sigexit,
 		syscall.SIGINT,
 		syscall.SIGHUP,
 		syscall.SIGQUIT,
@@ -89,13 +101,21 @@ func main() {
 	)
 
 	go func() {
-		<-sigc
+		<-sigexit
 		cancel()
 	}()
 
 	log.Println("waiting for quit signal")
 	<-ctx.Done()
 	time.Sleep(time.Second / 2)
+}
+
+func dumpStats(tuns []*tunnel.Tunnel) {
+	for _, tun := range tuns {
+		if tun.IsOpen {
+			fmt.Println(tun)
+		}
+	}
 }
 
 func makeSingleTunnelConfig(a, r, l, k string) *tunnel.Config {
