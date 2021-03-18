@@ -58,9 +58,7 @@ the host key.  As well as the listen port and if the server should run or not.
       - ssh-rsa AAAAB...snip...9xWs7+Dx
     host_key: |
       -----BEGIN RSA PRIVATE KEY-----
-      MIICXgIBAAKBgQC+SBJnM94o7iKLep5+h8mLSDazpRasRRiE7zLYBFP9Ea9dTewX
       ...ship...
-      79QCQnOUsj6NNL0Ln5KZuRrfB5Nl7iBaDlxsLegvP3IuSA==
       -----END RSA PRIVATE KEY-----
 
 ### Client
@@ -72,17 +70,13 @@ as any tunnels that should be connected.
       - address: *
         private |
           -----BEGIN RSA PRIVATE KEY-----
-          MIICWwIBAAKBgQDJPiD1u/3xk3LBl8MxWrnoh8Jgtb15gheLaS4IJeExNcnqHVkC
           ...snip...
-          Mqw1OD4t3HMyhqvwItcllju9GGTZjdhOZipbzNicSg==
           -----END RSA PRIVATE KEY-----
         public: ssh-rsa AAAA...snip...JR7btF0hDw== robert@behemoth
       - address: jumpbox.example.com:22
         private |
           -----BEGIN RSA PRIVATE KEY-----
-          MIICWwIBAAKBgQDJPiD1u/3xk3LBl8MxWrnoh8Jgtb15gheLaS4IJeExNcnqHVkC
           ...snip...
-          Mqw1OD4t3HMyhqvwItcllju9GGTZjdhOZipbzNicSg==
           -----END RSA PRIVATE KEY-----
         public: ssh-rsa AAAA...snip...JR7btF0hDw== robert@behemoth
     tunnels:
