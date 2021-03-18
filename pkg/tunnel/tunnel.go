@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log"
 	"net"
 	"strings"
 	"sync"
@@ -93,17 +95,16 @@ func (tun *Tunnel) Open(ctx context.Context, cl SSHConn) (err error) {
 
 	doneChan := make(chan bool)
 	go func() {
-		_ = tun.strategy(ctx, cl) // TODO: print the error
+		if err := tun.strategy(ctx, cl); err != nil && ctx.Err() == nil {
+			log.Printf("ERROR: %s stopped: %s", tun, err) // only print the error if the ctx wasn't quit
+		}
 		close(doneChan)
 	}()
 
 	tun.IsOpen = true
 
 	go func() {
-		select {
-		case <-ctx.Done():
-		case <-doneChan:
-		}
+		<-doneChan
 		tun.IsOpen = false
 	}()
 

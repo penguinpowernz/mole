@@ -65,7 +65,7 @@ the host key.  As well as the listen port and if the server should run or not.
       - ssh-rsa AAAAB...snip...9xWs7+Dx
     host_key: |
       -----BEGIN RSA PRIVATE KEY-----
-      ...ship...
+      ...snip...
       -----END RSA PRIVATE KEY-----
 
 ### Client
@@ -86,8 +86,9 @@ as any tunnels that should be connected.
           ...snip...
           -----END RSA PRIVATE KEY-----
         public: ssh-rsa AAAA...snip...JR7btF0hDw== robert@behemoth
+        host: ssh-rsa ZZZZ...snip...65ASdw0AWsfa==
     tunnels:
-      - address:  192.168.1.100:222       # forward your NATS server so it looks like the remote host is running NATS too
+      - address:  192.168.1.100:222       # pretend you're running NATS locally by connecting your local port to the remote NATS server
         local:    "4222"
         remote:   "4222"
       - address:  192.168.1.100:222       # serve your local webserver on the specific interface on the remote host
@@ -95,7 +96,7 @@ as any tunnels that should be connected.
         remote:   "172.31.1.1:80"
         reverse:  true
       - address:  192.168.1.100:222       # the same but using the SSH port forward definition
-        L:        "172.31.1.1:80:localhost:80"
+        L:        "172.31.1.1:8080:localhost:8080"
       - address:  jumpbox.example.com:22  # poor mans dyndns, turn your cloud server into a jumpbox for your home machine
         local:    22
         remote:   0.0.0.0:2222
@@ -125,3 +126,4 @@ into your `~/.ssh/authorized_keys` file on that server.
 - [ ] test that gateway ports actually work by specifying 0.0.0.0 as the bind address
 - [ ] use moled to configure the local users `~/.ssh` directory
 - [ ] add some persistent retrying for temporary connectivity issues
+- [ ] allow changing the user instead of just getting process user
