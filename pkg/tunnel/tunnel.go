@@ -84,14 +84,20 @@ func (tun *Tunnel) Open(ctx context.Context, cl SSHConn) (err error) {
 	return nil
 }
 
-func (tun *Tunnel) normalizePorts() {
-	if tun.Remote[0] == ':' || (tun.Remote[0] != ':' && !strings.Contains(tun.Remote, ":")) {
-		tun.Remote = "localhost:" + tun.Remote
+func normalizePort(p string) string {
+	h := "localhost"
+	if p[0] == ':' || (p[0] != ':' && !strings.Contains(p, ":")) {
+		if p[0] != ':' {
+			h += ":"
+		}
+		p = h + p
 	}
+	return p
+}
 
-	if tun.Local[0] == ':' || (tun.Local[0] != ':' && !strings.Contains(tun.Local, ":")) {
-		tun.Local = "localhost:" + tun.Local
-	}
+func (tun *Tunnel) normalizePorts() {
+	tun.Remote = normalizePort(tun.Remote)
+	tun.Local = normalizePort(tun.Local)
 }
 
 // Name will return the name of this tunnel
