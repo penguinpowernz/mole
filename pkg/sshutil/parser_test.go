@@ -1,4 +1,4 @@
-package main
+package sshutil
 
 import (
 	"fmt"
@@ -6,27 +6,27 @@ import (
 )
 
 func TestLPFLocal(t *testing.T) {
-	l, r := breakApartLPF("1234:localhost:4568")
+	l, r := ParsePortForwardDefinition("1234:localhost:4568")
 	if l != "localhost:4568" {
 		t.Fail()
 	}
-	if r != "localhost:1234" {
+	if r != "127.0.0.1:1234" {
 		t.Fail()
 	}
 }
 
 func TestLPFLocalSimple(t *testing.T) {
-	l, r := breakApartLPF("1234:4568")
-	if l != "localhost:4568" {
+	l, r := ParsePortForwardDefinition("1234:4568")
+	if l != "127.0.0.1:4568" {
 		t.Fail()
 	}
-	if r != "localhost:1234" {
+	if r != "127.0.0.1:1234" {
 		t.Fail()
 	}
 }
 
 func TestLPFRemote(t *testing.T) {
-	l, r := breakApartLPF("0.0.0.0:1234:localhost:4568")
+	l, r := ParsePortForwardDefinition("0.0.0.0:1234:localhost:4568")
 	fmt.Println(l, r)
 	if l != "localhost:4568" {
 		t.Fail()
@@ -37,11 +37,11 @@ func TestLPFRemote(t *testing.T) {
 }
 
 func TestLPFRemoteExtraColon(t *testing.T) {
-	l, r := breakApartLPF(":1234:localhost:4568")
+	l, r := ParsePortForwardDefinition(":1234:localhost:4568")
 	if l != "localhost:4568" {
 		t.Fail()
 	}
-	if r != "localhost:1234" {
+	if r != "127.0.0.1:1234" {
 		t.Fail()
 	}
 }

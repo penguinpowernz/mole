@@ -25,6 +25,14 @@ func Reverse() Option {
 	}
 }
 
+// PFD will set the tunnel ports up using the given SSH port forward definition
+func PFD(def string) Option {
+	return func(tun *Tunnel) error {
+		tun.Local, tun.Remote = sshutil.ParsePortForwardDefinition(def)
+		return nil
+	}
+}
+
 func BuildTunnels(cfg Config) []*Tunnel {
 	tuns := []*Tunnel{}
 	for _, t := range cfg.Tunnels {
