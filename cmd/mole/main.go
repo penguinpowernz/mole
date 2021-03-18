@@ -108,7 +108,7 @@ func makeSingleTunnelConfig(a, r, l, k string) *tunnel.Config {
 	return &tunnel.Config{
 		Keys: []tunnel.KeyPair{{Private: string(data), Address: a}},
 		Tunnels: []tunnel.Tunnel{
-			{Address: a, Local: l, Remote: r, Enabled: true},
+			{Address: a, Local: l, Remote: r},
 		},
 	}
 }

@@ -80,17 +80,18 @@ as any tunnels that should be connected.
           -----END RSA PRIVATE KEY-----
         public: ssh-rsa AAAA...snip...JR7btF0hDw== robert@behemoth
     tunnels:
-      - address: 192.168.1.100:222       # forward your NATS server so it looks like the remote host is running NATS too
-        local:   "4222"
-        remote:  "4222"
-      - address: 192.168.1.100:222       # serve your local webserver on the specific interface on the remote host
-        local:   "80"
-        remote:  "172.31.1.1:80"
-        reverse: true
-      - address: jumpbox.example.com:22  # poor mans dyndns, turn your cloud server into a jumpbox for your home machine
-        local:   22
-        remote:  0.0.0.0:2222
-        reverse: true
+      - address:  192.168.1.100:222       # forward your NATS server so it looks like the remote host is running NATS too
+        local:    "4222"
+        remote:   "4222"
+      - address:  192.168.1.100:222       # serve your local webserver on the specific interface on the remote host
+        local:    "80"
+        remote:   "172.31.1.1:80"
+        reverse:  true
+      - address:  jumpbox.example.com:22  # poor mans dyndns, turn your cloud server into a jumpbox for your home machine
+        local:    22
+        remote:   0.0.0.0:2222
+        reverse:  true
+        disabled: true
 
 So in order to connect the client to a normal SSH server, simply copy your public key
 into your `~/.ssh/authorized_keys` file on that server.

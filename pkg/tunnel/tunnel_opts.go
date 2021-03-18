@@ -45,17 +45,17 @@ func PFD(def string) Option {
 func BuildTunnels(cfg Config) []*Tunnel {
 	tuns := []*Tunnel{}
 	for _, t := range cfg.Tunnels {
-		if !t.Enabled {
+		if t.Disabled {
 			continue
 		}
 
 		t := &Tunnel{
-			Address: t.Address,
-			Local:   t.Local,
-			Remote:  t.Remote,
-			Reverse: t.Reverse,
-			Enabled: true,
-			mu:      new(sync.Mutex),
+			Address:  t.Address,
+			Local:    t.Local,
+			Remote:   t.Remote,
+			Reverse:  t.Reverse,
+			Disabled: false,
+			mu:       new(sync.Mutex),
 		}
 
 		tuns = append(tuns, t)

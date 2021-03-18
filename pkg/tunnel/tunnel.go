@@ -17,8 +17,8 @@ type Tunnel struct {
 	Address string `json:"address"`
 	Local   string `json:"local_port"`
 	Remote  string `json:"remote_port"`
-	Enabled bool   `json:"enabled"`
 	Reverse bool   `json:"reverse"`
+	Disabled   bool   `json:"disabled"`
 
 	IsOpen bool `json:"-"`
 
