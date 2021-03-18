@@ -21,6 +21,7 @@ type KeyPair struct {
 	Address string `json:"address"`
 	Private string `json:"private"`
 	Public  string `json:"public"`
+	Host    string `json:"host"`
 }
 
 // KeyForAddress will return the keypair for the given address

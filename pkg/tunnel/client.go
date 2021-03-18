@@ -15,11 +15,18 @@ import (
 // NewClient will create a new client that will connect to the given address
 // and authenticate using the given private key text.  It will return an error
 // if the private key could not be parsed
-func NewClient(addr string, _privkey string) (*Client, error) {
+func NewClient(addr string, _privkey string, hostkeys ...string) (*Client, error) {
 	sshcfg := &ssh.ClientConfig{
 		User:            os.Getenv("USER"),
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		// HostKeyCallback: ssh.FixedHostKey(hostKey),
+	}
+
+	if len(hostkeys) > 0 && hostkeys[0] != "" {
+		k, err := ssh.ParsePublicKey([]byte(hostkeys[0]))
+		if err != nil {
+			return nil, err
+		}
+		sshcfg.HostKeyCallback = ssh.FixedHostKey(k)
 	}
 
 	privkey, err := ssh.ParsePrivateKey([]byte(_privkey))

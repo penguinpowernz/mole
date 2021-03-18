@@ -46,19 +46,17 @@ type ConnPool struct {
 	ctx     context.Context
 }
 
-// AddClient will add a new client with the given address and key to the
-// pool but not actually connect it
-func (pl *ConnPool) AddClient(addr, key string) error {
-	for _, cl := range pl.clients {
-		if cl.addr == addr {
-			return nil
-		}
-	}
-	cl, err := NewClient(addr, key)
+// AddClient will add a client to the pool but not actually connect it
+func (pl *ConnPool) AddClient(c *Client, err error) error {
 	if err != nil {
 		return err
 	}
-	pl.clients = append(pl.clients, cl)
+	for _, cl := range pl.clients {
+		if cl.addr == c.addr {
+			return nil
+		}
+	}
+	pl.clients = append(pl.clients, c)
 	return nil
 }
 
@@ -94,7 +92,7 @@ func (pl *ConnPool) GetClient(addr, key string) (*Client, error) {
 func PopulatePool(pool *ConnPool, cfg Config) error {
 	for _, t := range cfg.Tunnels {
 		k := cfg.KeyForAddress(t.Address)
-		if err := pool.AddClient(k.Address, k.Private); err != nil {
+		if err := pool.AddClient(NewClient(k.Address, k.Private, k.Host)); err != nil {
 			return err
 		}
 	}

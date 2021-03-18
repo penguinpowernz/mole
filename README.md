@@ -110,7 +110,7 @@ into your `~/.ssh/authorized_keys` file on that server.
 - [x] for single port forward command, use default SSH key if none specified (e.g. `~/.ssh/id_rsa`)
 - [ ] clean up logging
 - [x] add interactive client acceptance
-- [ ] add host key checking for clients
+- [x] add host key checking for clients
 - [ ] allow generating server config in a client config file and vice versa
 - [x] add remote port forwarding
 - [ ] some kind of statistics or status for the client and server
