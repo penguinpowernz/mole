@@ -69,23 +69,31 @@ In here we have the public and private key for connecting with the server as wel
 as any tunnels that should be connected.
 
     keys: 
-      - address: 192.168.1.100:222
-      - private |
-      -----BEGIN RSA PRIVATE KEY-----
-      MIICWwIBAAKBgQDJPiD1u/3xk3LBl8MxWrnoh8Jgtb15gheLaS4IJeExNcnqHVkC
-      ...snip...
-      Mqw1OD4t3HMyhqvwItcllju9GGTZjdhOZipbzNicSg==
-      -----END RSA PRIVATE KEY-----
-      public: ssh-rsa AAAA...snip...JR7btF0hDw== robert@behemoth
+      - address: *
+        private |
+          -----BEGIN RSA PRIVATE KEY-----
+          MIICWwIBAAKBgQDJPiD1u/3xk3LBl8MxWrnoh8Jgtb15gheLaS4IJeExNcnqHVkC
+          ...snip...
+          Mqw1OD4t3HMyhqvwItcllju9GGTZjdhOZipbzNicSg==
+          -----END RSA PRIVATE KEY-----
+        public: ssh-rsa AAAA...snip...JR7btF0hDw== robert@behemoth
+      - address: jumpbox.example.com:22
+        private |
+          -----BEGIN RSA PRIVATE KEY-----
+          MIICWwIBAAKBgQDJPiD1u/3xk3LBl8MxWrnoh8Jgtb15gheLaS4IJeExNcnqHVkC
+          ...snip...
+          Mqw1OD4t3HMyhqvwItcllju9GGTZjdhOZipbzNicSg==
+          -----END RSA PRIVATE KEY-----
+        public: ssh-rsa AAAA...snip...JR7btF0hDw== robert@behemoth
     tunnels:
-      - address: 192.168.1.100:8022   # forward your NATS server so it looks like the remote host is running NATS too
+      - address: 192.168.1.100:222       # forward your NATS server so it looks like the remote host is running NATS too
         local:   "4222"
         remote:  "4222"
-      - address: 192.168.1.100:8022   # serve your local webserver on the specific interface on the remote host
+      - address: 192.168.1.100:222       # serve your local webserver on the specific interface on the remote host
         local:   "80"
         remote:  "172.31.1.1:80"
         reverse: true
-      - address: jumpbox.example.com  # poor mans dyndns, turn your cloud server into a jumpbox for your home machine
+      - address: jumpbox.example.com:22  # poor mans dyndns, turn your cloud server into a jumpbox for your home machine
         local:   22
         remote:  0.0.0.0:2222
         reverse: true
