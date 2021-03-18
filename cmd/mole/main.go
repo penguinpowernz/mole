@@ -141,7 +141,26 @@ func loadConfig(specifiedFilename, keyfile string) *tunnel.Config {
 
 func breakApartLPF(lpf string) (string, string) {
 	bits := strings.Split(lpf, ":")
-	return bits[0], strings.Join(bits[1:], ":")
+
+	var r, l string
+
+	switch strings.Count(lpf, ":") {
+	case 3: // 0.0.0.0:1234:localhost:1234
+		r = strings.Join(bits[0:2], ":")
+		l = strings.Join(bits[2:], ":")
+		if lpf[0] == ':' {
+			r = "localhost" + r
+		}
+
+	case 2: // 1234:localhost:5678
+		r = "localhost:" + bits[0]
+		l = strings.Join(bits[1:], ":")
+	case 1: // "1234:5678"
+		r = "localhost:" + bits[0]
+		l = "localhost:" + bits[1]
+	}
+
+	return l, r
 }
 
 func privateKeyText(keyfile string) string {

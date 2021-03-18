@@ -1,21 +1,47 @@
 package main
 
 import (
+	"fmt"
 	"testing"
-
-	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestBreakLPFApart(t *testing.T) {
-	Convey("given some LPFs", t, func() {
-		Convey("they should be broken apart properly", func() {
-			l, r := breakApartLPF("1234:localhost:4568")
-			So(r, ShouldEqual, "localhost:4568")
-			So(l, ShouldEqual, "1234")
+func TestLPFLocal(t *testing.T) {
+	l, r := breakApartLPF("1234:localhost:4568")
+	if l != "localhost:4568" {
+		t.Fail()
+	}
+	if r != "localhost:1234" {
+		t.Fail()
+	}
+}
 
-			l, r = breakApartLPF("1234:4568")
-			So(r, ShouldEqual, "4568")
-			So(l, ShouldEqual, "1234")
-		})
-	})
+func TestLPFLocalSimple(t *testing.T) {
+	l, r := breakApartLPF("1234:4568")
+	if l != "localhost:4568" {
+		t.Fail()
+	}
+	if r != "localhost:1234" {
+		t.Fail()
+	}
+}
+
+func TestLPFRemote(t *testing.T) {
+	l, r := breakApartLPF("0.0.0.0:1234:localhost:4568")
+	fmt.Println(l, r)
+	if l != "localhost:4568" {
+		t.Fail()
+	}
+	if r != "0.0.0.0:1234" {
+		t.Fail()
+	}
+}
+
+func TestLPFRemoteExtraColon(t *testing.T) {
+	l, r := breakApartLPF(":1234:localhost:4568")
+	if l != "localhost:4568" {
+		t.Fail()
+	}
+	if r != "localhost:1234" {
+		t.Fail()
+	}
 }
