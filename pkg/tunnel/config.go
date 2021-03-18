@@ -16,27 +16,31 @@ type Config struct {
 	Keys     []KeyPair `json:"keys"`
 }
 
+// KeyPair is a public/private key pair with an associated server address/port
 type KeyPair struct {
 	Address string `json:"address"`
 	Private string `json:"private"`
 	Public  string `json:"public"`
 }
 
-func (cfg Config) KeyForAddress(addr string) string {
-	def := ""
+// KeyForAddress will return the keypair for the given address
+func (cfg Config) KeyForAddress(addr string) KeyPair {
+	var def KeyPair
 	for _, k := range cfg.Keys {
 		if k.Address == "*" {
-			def = k.Private
+			def = k
 		}
 		if k.Address == addr {
-			return k.Private
+			return k
 		}
 	}
 	return def
 }
 
+// DefaultKey will return the default private key that should
+// be used for any tunnels that don't specify one
 func (cfg Config) DefaultKey() string {
-	return cfg.KeyForAddress("*")
+	return cfg.KeyForAddress("*").Private
 }
 
 // Save will save the config to disk

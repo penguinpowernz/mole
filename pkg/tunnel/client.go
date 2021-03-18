@@ -47,10 +47,12 @@ type Client struct {
 	deadChan chan struct{}
 }
 
+// Dial will dial a port on the remote server
 func (cl *Client) Dial(n, a string) (net.Conn, error) {
 	return cl.ssh.Dial(n, a)
 }
 
+// Listen will open a listener to a port on the remote server
 func (cl *Client) Listen(n, a string) (net.Listener, error) {
 	return cl.ssh.Listen(n, a)
 }

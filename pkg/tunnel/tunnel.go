@@ -26,6 +26,7 @@ type Tunnel struct {
 	strategy Strategy
 }
 
+// NewTunnelFromOpts will create a new tunnel from the given options
 func NewTunnelFromOpts(opts ...Option) (*Tunnel, error) {
 	t := &Tunnel{}
 	for _, opt := range opts {
@@ -37,7 +38,7 @@ func NewTunnelFromOpts(opts ...Option) (*Tunnel, error) {
 	if t.strategy == nil {
 		t.strategy = LocalStrategy(t.Local, t.Remote)
 		if t.Reverse {
-			t.strategy = RemoteStrategy(t.Local, t.Remote)
+			t.strategy = ReverseStrategy(t.Local, t.Remote)
 		}
 	}
 

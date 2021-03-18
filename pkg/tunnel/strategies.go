@@ -7,6 +7,8 @@ import (
 	"net"
 )
 
+// Strategy is a tunneling strategy that can be used to do
+// port forwarding over an SSH connection
 type Strategy func(context.Context, SSHConn) error
 
 type SSHConn interface {
@@ -14,7 +16,9 @@ type SSHConn interface {
 	Listen(string, string) (net.Listener, error)
 }
 
-func RemoteStrategy(local, remote string) Strategy {
+// ReverseStrategy is a strategy for setting up a reverse port
+// forward from a remote port to a local port
+func ReverseStrategy(local, remote string) Strategy {
 	return Strategy(func(ctx context.Context, conn SSHConn) error {
 		l, err := conn.Listen("tcp", remote)
 		if err != nil {
@@ -43,6 +47,8 @@ func RemoteStrategy(local, remote string) Strategy {
 	})
 }
 
+// LocalStrategy is a strategy for setting up a port
+// forward from a local port to a remote port
 func LocalStrategy(local, remote string) Strategy {
 	return Strategy(func(ctx context.Context, conn SSHConn) error {
 		l, err := net.Listen("tcp", local)
@@ -72,6 +78,8 @@ func LocalStrategy(local, remote string) Strategy {
 	})
 }
 
+// Bridge will mirror two active network connections using the given
+// context to allow stopping the mirror
 func Bridge(ctx context.Context, upstream, downstream net.Conn) {
 	upDone := make(chan struct{})
 	downDone := make(chan struct{})

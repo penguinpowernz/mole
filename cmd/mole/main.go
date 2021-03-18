@@ -67,7 +67,7 @@ func main() {
 
 	for _, tun := range tunnel.BuildTunnels(*cfg) {
 		log.Println("opening tunnel @", tun.Address, ":", tun.Local, "->", tun.Remote)
-		cl, err := pool.GetClient(tun.Address, cfg.KeyForAddress(tun.Address))
+		cl, err := pool.GetClient(tun.Address, cfg.KeyForAddress(tun.Address).Private)
 		if err != nil {
 			panic(err)
 		}

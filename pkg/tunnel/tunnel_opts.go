@@ -1,9 +1,15 @@
 package tunnel
 
-import "sync"
+import (
+	"sync"
 
+	"github.com/penguinpowernz/mole/pkg/sshutil"
+)
+
+// Option is an option for the tunnel
 type Option func(*Tunnel) error
 
+// Local will set the local port binding for the tunnel
 func Local(bind string) Option {
 	return func(tun *Tunnel) error {
 		tun.Local = bind
@@ -11,6 +17,7 @@ func Local(bind string) Option {
 	}
 }
 
+// Remote will set the remote port binding for the tunnel
 func Remote(bind string) Option {
 	return func(tun *Tunnel) error {
 		tun.Remote = bind
@@ -18,6 +25,7 @@ func Remote(bind string) Option {
 	}
 }
 
+// Reverse will set a tunnel as being reverse
 func Reverse() Option {
 	return func(tun *Tunnel) error {
 		tun.Reverse = true
@@ -33,6 +41,7 @@ func PFD(def string) Option {
 	}
 }
 
+// BuildTunnelswill build a collection of tunnels from a config
 func BuildTunnels(cfg Config) []*Tunnel {
 	tuns := []*Tunnel{}
 	for _, t := range cfg.Tunnels {
