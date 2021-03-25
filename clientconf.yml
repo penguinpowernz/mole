@@ -1,0 +1,18 @@
+---
+"*":
+  private_key:
+  public_key:
+  host_key: 
+"192.168.1.100:222":
+  private_key:
+  public_key:
+  host_key: 
+  tunnels:
+    - L: "4222:localhost:4222"
+    - R: "80:localhost:80"
+    - remote: 8080
+      local: 8080
+      reverse: true
+    - remote: 5900
+      local: 5910
+      disabled: true
