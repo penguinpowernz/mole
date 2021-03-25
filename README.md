@@ -112,6 +112,8 @@ into your `~/.ssh/authorized_keys` file on that server.
 
 - [ ] add debian package for armhf
 - [ ] add debian package for amd64
+- [ ] simplify client config
+- [ ] interactive acceptance on the remote side, saves host key on the local side
 - [x] allow using config file in the mole client
 - [x] specify a tunnel with the standard SSH format (e.g. `3344:localhost:3301`)
 - [x] specify a tunnel with the standard SSH format at command line (e.g. `3344:localhost:3301`)
