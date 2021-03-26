@@ -19,8 +19,10 @@ import (
 
 func main() {
 	var addr, remote, local, generateConfig, localTunnel, remoteTunnel, keyfile, cfgFile string
+	var reverse bool
 	flag.StringVar(&addr, "a", "", "the address to connect to")
 	flag.StringVar(&remote, "r", "", "the remote port")
+	flag.BoolVar(&reverse, "rr", false, "reverse port forward")
 	flag.StringVar(&local, "l", "", "the local port")
 	flag.StringVar(&localTunnel, "L", "", "local port forward in SSH format")
 	flag.StringVar(&remoteTunnel, "R", "", "remote port forward in SSH format")

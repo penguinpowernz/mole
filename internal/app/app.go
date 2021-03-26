@@ -1,48 +1,115 @@
 package app
 
 import (
+	"bufio"
+	"context"
+	"encoding/json"
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
+	"log"
+	"net"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/gliderlabs/ssh"
-	"github.com/penguinpowernz/mole/pkg/tunnel/server"
 )
 
-// InteractivelyAcceptPublicKeys will change the server auth function so that it
-// explicitly requests acceptances from the console for each incoming request and
-// saves those public keys to the config file
-func InteractivelyAcceptPublicKeys(svr *server.Server, cfg *server.Config) {
-	fmt.Println("Waiting for new connections, push CTRL+C to cancel...")
-	svr.PublicKeyHandler = func(ctx ssh.Context, key ssh.PublicKey) bool {
-		// don't ask about known ones
-		if svr.IsKeyAuthorized(ctx, key) {
-			return true
-		}
+var moleSocket = "/var/run/moled.sock"
 
-		var allow bool
-
-		survey.AskOne(&survey.Confirm{
-			Message: fmt.Sprintf("Allow %s from %s to connect?", ctx.User(), ctx.RemoteAddr().String()),
-			Default: false,
-		}, &allow)
-
-		if allow {
-			cfg.AddAuthorizedKey(key)
-			cfg.Save()
-			fmt.Println("New public key was saved to your list of authorized keys")
-		}
-
-		return allow
+func UDSAuthRequest(ctx ssh.Context) (bool, error) {
+	var allow bool
+	conn, err := net.Dial("unix", moleSocket)
+	if err != nil {
+		return false, err
 	}
-	defer func() { svr.PublicKeyHandler = svr.IsKeyAuthorized }()
+	defer conn.Close()
 
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc,
-		syscall.SIGINT,
-	)
+	data, err := json.Marshal([]string{ctx.User(), ctx.RemoteAddr().String()})
+	if err != nil {
+		return false, err
+	}
 
-	<-sigc
+	_, err = conn.Write(append(data, '\n'))
+	if err != nil {
+		return false, err
+	}
+
+	buf := make([]byte, 1)
+	_, err = conn.Read(buf)
+	if err != nil {
+		return false, err
+	}
+
+	res := string(buf[0])
+	if res == "y" {
+		allow = true
+	}
+
+	return allow, nil
+}
+
+func UDSAuthServer(ctx context.Context) error {
+	ln, err := net.Listen("unix", moleSocket)
+	if err != nil {
+		return err
+	}
+	defer ln.Close()
+
+	go func() {
+		for {
+			if ctx.Err() != nil {
+				log.Println("context done")
+				return
+			}
+
+			conn, err := ln.Accept()
+			if err != nil {
+				log.Println(err)
+				conn.Close()
+				continue
+			}
+			defer conn.Close()
+
+			buf := []byte{}
+			_, err = conn.Read(buf)
+			if err != nil {
+				log.Println(err)
+				conn.Close()
+				continue
+			}
+
+			r := bufio.NewReader(conn)
+			data, _, _ := r.ReadLine()
+
+			pair := []string{}
+			log.Println(string(data))
+			if err := json.Unmarshal(data, &pair); err != nil {
+				log.Println(err)
+				conn.Close()
+				continue
+			}
+
+			var allow bool
+			survey.AskOne(&survey.Confirm{
+				Message: fmt.Sprintf("Allow %s from %s to connect?", pair[0], pair[1]),
+				Default: false,
+			}, &allow)
+
+			res := byte('n')
+			if allow {
+				res = byte('y')
+			}
+
+			_, err = conn.Write([]byte{res})
+			if err != nil {
+				log.Println(err)
+				conn.Close()
+				continue
+			}
+
+			conn.Close()
+		}
+	}()
+
+	<-ctx.Done()
+	ln.Close()
+	return nil
 }

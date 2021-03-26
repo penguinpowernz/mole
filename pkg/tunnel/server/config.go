@@ -19,6 +19,7 @@ type Config struct {
 	RunServer      bool     `json:"run_server"`
 	ListenPort     string   `json:"listen_port"`
 	HostKey        string   `json:"host_key"`
+	InteractiveUDS bool     `json:"interactive_uds"`
 }
 
 // AuthorizedKeyBytes will return the authorized keys as a byte array

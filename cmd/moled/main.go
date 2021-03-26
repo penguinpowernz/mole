@@ -21,39 +21,54 @@ var svr *server.Server
 
 func main() {
 	var cfgFile, generateConfig, port string
-	var interactiveAccept bool
+	var interactiveAccept, interactiveUDS bool
 	flag.StringVar(&generateConfig, "g", "", "generate a new config file to the given location")
 	flag.StringVar(&cfgFile, "c", "", "the config file to use")
 	flag.StringVar(&port, "p", "", "the port to serve the server on")
 	flag.BoolVar(&interactiveAccept, "i", false, "interactively accept public keys (useful for setting up)")
+	flag.BoolVar(&interactiveUDS, "I", false, "don't run the server, just listen for public key requests")
 	flag.Parse()
-
-	if generateConfig != "" {
-		tryToGenerateConfig(generateConfig)
-	}
-
-	cfg := loadConfig(cfgFile)
-
-	if port = normalizePort(port); port != "" {
-		cfg.ListenPort = port
-	}
-
-	if !cfg.RunServer {
-		log.Fatal("configured to not run server, nothing to do...")
-	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	events := event.New()
-	logEvents(events)
+	if !interactiveUDS {
+		if generateConfig != "" {
+			tryToGenerateConfig(generateConfig)
+		}
 
-	svr := server.NewServer(cfg, events)
-	go runServer(ctx, cfg, svr)
+		cfg := loadConfig(cfgFile)
 
-	if interactiveAccept {
-		app.InteractivelyAcceptPublicKeys(svr, cfg)
-		return
+		if port = normalizePort(port); port != "" {
+			cfg.ListenPort = port
+		}
+
+		if !cfg.RunServer {
+			log.Fatal("configured to not run server, nothing to do...")
+		}
+
+		events := event.New()
+		logEvents(events)
+
+		svr := server.NewServer(cfg, events)
+		go runServer(ctx, cfg, svr)
+
+		if interactiveAccept {
+			server.InteractivelyAcceptPublicKeys(svr, cfg)
+			return
+		}
+	}
+	if interactiveUDS {
+		// run the interactive public key authorizer, listen for requests
+		// from an already running moled process
+		go func() {
+			err := app.UDSAuthServer(ctx)
+			if err != nil {
+				log.Println(err)
+				cancel()
+			}
+		}()
+
 	}
 
 	sigc := make(chan os.Signal, 1)

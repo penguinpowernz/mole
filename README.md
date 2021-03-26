@@ -39,11 +39,11 @@ in the command line argument:
 
 The client can specify the tunnel to run:
 
-    mole -r 3000 -l 3000 -a 192.168.1.100:222 -i ~/.ssh/id_rsa
-    mole -r 3000 -l 3000 -a 192.168.1.100:22 -i ~/.ssh/id_rsa             // connect to a normal SSH server
-    mole -c mole.yml                                                      // TODO: use the tunnels and private key from config file
-    mole -lt 3000:localhost:3000 -a 192.168.1.100:222  -i ~/.ssh/id_rsa
-    mole -rt :22:localhost:33066 -a 192.168.1.100:222  -i ~/.ssh/id_rsa   // TODO: remote port forward using the typical SSH format
+    mole -r 3000 -l 3000 -a 192.168.1.100:222 -i ~/.ssh/id_rsa            // local port forward
+    mole -L 3000:localhost:3000 -a 192.168.1.100:222  -i ~/.ssh/id_rsa    // the same but SSH format
+
+    mole -rr -r 22 -l 33066 -a 192.168.1.100:222 -i ~/.ssh/id_rsa         // reverse port forward 
+    mole -R :22:localhost:33066 -a 192.168.1.100:222  -i ~/.ssh/id_rsa    // the same but SSH format
 
 You can dump the currently connected tunnels by calling kill on the process ID like so: `kill -USR1 <pid>`:
 
@@ -51,6 +51,10 @@ You can dump the currently connected tunnels by calling kill on the process ID l
                                      192.168.1.100:222 [                   localhost:80 <-- 172.31.1.1:80                  ]
                                      192.168.1.100:222 [                 localhost:8080 <-- 172.31.1.1:8080                ]
                                jumpbox2.example.com:22 [                   localhost:22 <-- 0.0.0.0:2222                   ]
+
+You can interactively add a new tunnel from the command line (it will use `~/.ssh/id_rsa` if there isn't already a key specified for the address):
+
+    $ mole --save -a 172.31.1.34:222 -L 3309:localhost:3309
 
 ## Config File
 

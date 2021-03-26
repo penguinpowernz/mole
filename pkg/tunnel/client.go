@@ -26,6 +26,7 @@ type Client struct {
 	ssh       *ssh.Client
 	sshcfg    *ssh.ClientConfig
 	connected bool
+	initted   bool
 
 	Address string    `json:"address"`
 	Private string    `json:"private"`
@@ -38,6 +39,9 @@ type Client struct {
 }
 
 func (cl *Client) init() error {
+	if cl.initted {
+		return nil
+	}
 	sshcfg := &ssh.ClientConfig{
 		User:            os.Getenv("USER"),
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
@@ -59,6 +63,7 @@ func (cl *Client) init() error {
 	sshcfg.Auth = append(sshcfg.Auth, ssh.PublicKeys(privkey))
 	cl.sshcfg = sshcfg
 	cl.mu = new(sync.Mutex)
+	cl.initted = true
 	return nil
 }
 
@@ -110,6 +115,7 @@ func (cl *Client) Close() (err error) {
 // ConnectWithContext will connect using the given context to signal when to disconnect or stop
 // trying to connect.  This will loop to continuously attempt to connect to the tunnel
 func (cl *Client) ConnectWithContext(ctx context.Context, events event.Dispatcher) {
+	cl.init()
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
 	if cl.connected {
