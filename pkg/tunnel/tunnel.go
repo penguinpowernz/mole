@@ -9,6 +9,9 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/AlexanderGrom/go-event"
 )
 
 // Dialer is a function that will dial a remote SSH server
@@ -17,7 +20,8 @@ type Dialer func(string, string) (net.Conn, error)
 // Tunnel represents the tunnel as it appears in the config, but
 // as an object that will do the actual tunnel connection
 type Tunnel struct {
-	Address    string `json:"address"`
+	addr string
+
 	Local      string `json:"local_port"`
 	Remote     string `json:"remote_port"`
 	Disabled   bool   `json:"disabled"`
@@ -27,8 +31,21 @@ type Tunnel struct {
 
 	IsOpen bool `json:"-"`
 
-	mu       *sync.Mutex `json:"-"`
+	mu       *sync.Mutex
 	strategy Strategy
+	doneChan chan bool
+}
+
+type Tunnels []*Tunnel
+
+func (tuns Tunnels) Open() []*Tunnel {
+	tunss := []*Tunnel{}
+	for _, t := range tuns {
+		if t.IsOpen {
+			tunss = append(tunss, t)
+		}
+	}
+	return tunss
 }
 
 // NewTunnelFromOpts will create a new tunnel from the given options
@@ -50,6 +67,8 @@ func NewTunnelFromOpts(opts ...Option) (*Tunnel, error) {
 	return t, nil
 }
 
+// UnmarshalJSON will unmarshal the individual tunnel config and
+// setup the relevant config derived fields so that it is ready to use
 func (tun *Tunnel) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, tun); err != nil {
 		return err
@@ -70,7 +89,37 @@ func (tun *Tunnel) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
+	if tun.strategy == nil {
+		tun.strategy = LocalStrategy(tun.Local, tun.Remote)
+		if tun.Reverse {
+			tun.strategy = ReverseStrategy(tun.Local, tun.Remote)
+		}
+	}
+
 	return nil
+}
+
+// KeepOpen will open the tunnel and keep it open if it closes
+func (tun *Tunnel) KeepOpen(ctx context.Context, cl SSHConn, ev event.Dispatcher) {
+	for {
+		if err := tun.Open(ctx, cl); err != nil {
+			ev.Go("log", fmt.Sprintf("ERROR: failed to open tunnel for %s: %s", tun.Name(), err))
+			time.Sleep(time.Second)
+			continue
+		}
+
+		ev.Go("log", fmt.Sprintf("tunnel opened: %s", tun.Name()))
+
+		select {
+		case <-tun.doneChan:
+			ev.Go("log", fmt.Sprintf("tunnel closed: %s", tun.Name()))
+			time.Sleep(time.Second)
+			continue
+		case <-ctx.Done():
+			ev.Go("log", fmt.Sprintf("tunnel done: %s", tun.Name()))
+			return
+		}
+	}
 }
 
 // Open will "open" the tunnel, by listening for new connections coming into
@@ -93,18 +142,18 @@ func (tun *Tunnel) Open(ctx context.Context, cl SSHConn) (err error) {
 
 	tun.normalizePorts()
 
-	doneChan := make(chan bool)
+	tun.doneChan = make(chan bool)
 	go func() {
 		if err := tun.strategy(ctx, cl); err != nil && ctx.Err() == nil {
 			log.Printf("ERROR: %s stopped: %s", tun, err) // only print the error if the ctx wasn't quit
 		}
-		close(doneChan)
+		close(tun.doneChan)
 	}()
 
 	tun.IsOpen = true
 
 	go func() {
-		<-doneChan
+		<-tun.doneChan
 		tun.IsOpen = false
 	}()
 
@@ -137,5 +186,5 @@ func (tun *Tunnel) String() string {
 	if tun.Reverse {
 		dir = "<--"
 	}
-	return fmt.Sprintf("%50s [    %30s  %s  %-30s     ]", tun.Address, tun.Local, dir, tun.Remote)
+	return fmt.Sprintf("%50s [    %30s  %s  %-30s     ]", tun.addr, tun.Local, dir, tun.Remote)
 }

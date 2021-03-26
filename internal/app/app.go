@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/AlecAivazis/survey"
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/gliderlabs/ssh"
 	"github.com/penguinpowernz/mole/pkg/tunnel/server"
 )

@@ -73,37 +73,36 @@ the host key.  As well as the listen port and if the server should run or not.
 In here we have the public and private key for connecting with the server as well
 as any tunnels that should be connected.
 
-    keys: 
-      - address: *
-        private |
+    ---
+    - address: "*"
+      private_key: |
           -----BEGIN RSA PRIVATE KEY-----
           ...snip...
           -----END RSA PRIVATE KEY-----
-        public: ssh-rsa AAAA...snip...JR7btF0hDw== robert@behemoth
-      - address: jumpbox.example.com:22
-        private |
+      public_key: ssh-rsa AAAA...snip...JR7btF0hDw== robert@behemoth
+    - address: "192.168.1.100:222"
+      # no key fields specified so it will use the keys from the address "*" (default)
+      # no host key specified so it will ignore host key (INSECURE!!)
+      tunnels:
+        - local:    "4222"                             # pretend you're running NATS locally by connecting your local port to the remote NATS server
+          remote:   "4222"
+        - local:    "80"                               # serve your local webserver on the specific interface on the remote host
+          remote:   "172.31.1.1:80"
+          reverse:  true
+        - L:        "172.31.1.1:8080:localhost:8080"   # the same but using the SSH port forward definition
+    - address: "jumpbox.example.com:22"
+      private_key: |
           -----BEGIN RSA PRIVATE KEY-----
           ...snip...
           -----END RSA PRIVATE KEY-----
-        public: ssh-rsa AAAA...snip...JR7btF0hDw== robert@behemoth
-        host: ssh-rsa ZZZZ...snip...65ASdw0AWsfa==
-    tunnels:
-      - address:  192.168.1.100:222       # pretend you're running NATS locally by connecting your local port to the remote NATS server
-        local:    "4222"
-        remote:   "4222"
-      - address:  192.168.1.100:222       # serve your local webserver on the specific interface on the remote host
-        local:    "80"
-        remote:   "172.31.1.1:80"
-        reverse:  true
-      - address:  192.168.1.100:222       # the same but using the SSH port forward definition
-        L:        "172.31.1.1:8080:localhost:8080"
-      - address:  jumpbox.example.com:22  # poor mans dyndns, turn your cloud server into a jumpbox for your home machine
-        local:    22
-        remote:   0.0.0.0:2222
-        reverse:  true
-        disabled: true
-      - address:  jumpbox2.example.com:22 # poor mans dyndns, but using the reverse port forward definition
-        R:        "0.0.0.0:2222:localhost:22"
+      public_key: ssh-rsa AAAA...snip...JR7btF0hDw== robert@behemoth
+      host_key: ssh-rsa ZZZZ...snip...65ASdw0AWsfa==
+      tunnels:
+        - local:    22                     # poor mans dyndns, turn your cloud server into a jumpbox for your home machine
+          remote:   0.0.0.0:2222
+          reverse:  true
+          disabled: true
+        - R: "0.0.0.0:2222:localhost:22"   # poor mans dyndns, but using the reverse port forward definition
 
 So in order to connect the client to a normal SSH server, simply copy your public key
 into your `~/.ssh/authorized_keys` file on that server.
@@ -112,7 +111,7 @@ into your `~/.ssh/authorized_keys` file on that server.
 
 - [ ] add debian package for armhf
 - [ ] add debian package for amd64
-- [ ] simplify client config
+- [x] simplify client config
 - [ ] interactive acceptance on the remote side, saves host key on the local side
 - [x] allow using config file in the mole client
 - [x] specify a tunnel with the standard SSH format (e.g. `3344:localhost:3301`)

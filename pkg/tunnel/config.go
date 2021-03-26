@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -11,28 +12,61 @@ import (
 
 // Config represents the config file for the tunnel client
 type Config struct {
-	Filename string    `json:"-"`
-	Tunnels  []Tunnel  `json:"tunnels"`
-	Keys     []KeyPair `json:"keys"`
+	Filename string `json:"-"`
+	Clients  []*Client
 }
 
-// KeyPair is a public/private key pair with an associated server address/port
-type KeyPair struct {
-	Address string `json:"address"`
-	Private string `json:"private"`
-	Public  string `json:"public"`
-	Host    string `json:"host"`
+// UnmarshalJSON is used because the config file contains an array but
+// our config object is a struct, we want to put that array into the
+// Clients field of the struct
+func (cfg *Config) UnmarshalJSON(data []byte) error {
+	if err := json.Unmarshal(data, &cfg.Clients); err != nil {
+		return err
+	}
+
+	cfg.copyDefaultKeys()
+
+	return nil
+}
+
+func (cfg Config) copyDefaultKeys() {
+	def := cfg.ClientWithAddress("*")
+	if def == nil {
+		return
+	}
+	if def.Private == "" && def.Public == "" {
+		return
+	}
+
+	for _, cl := range cfg.Clients {
+		if cl.Private == "" {
+			cl.Private = def.Private
+		}
+		if cl.Public == "" {
+			cl.Public = def.Public
+		}
+	}
+}
+
+// ClientWithAddress will return the client object for the given address
+func (cfg Config) ClientWithAddress(addr string) *Client {
+	for _, c := range cfg.Clients {
+		if c.Address == addr {
+			return c
+		}
+	}
+	return nil
 }
 
 // KeyForAddress will return the keypair for the given address
-func (cfg Config) KeyForAddress(addr string) KeyPair {
-	var def KeyPair
-	for _, k := range cfg.Keys {
-		if k.Address == "*" {
-			def = k
+func (cfg Config) KeyForAddress(addr string) string {
+	var def string
+	for _, c := range cfg.Clients {
+		if c.Address == "*" {
+			def = c.Private
 		}
-		if k.Address == addr {
-			return k
+		if c.Address == addr {
+			return c.Private
 		}
 	}
 	return def
@@ -41,7 +75,16 @@ func (cfg Config) KeyForAddress(addr string) KeyPair {
 // DefaultKey will return the default private key that should
 // be used for any tunnels that don't specify one
 func (cfg Config) DefaultKey() string {
-	return cfg.KeyForAddress("*").Private
+	return cfg.KeyForAddress("*")
+}
+
+// Tunnels will return the tunnels from all clients
+func (cfg Config) Tunnels() Tunnels {
+	tuns := []*Tunnel{}
+	for _, c := range cfg.Clients {
+		tuns = append(tuns, c.Tunnels...)
+	}
+	return tuns
 }
 
 // Save will save the config to disk
@@ -74,8 +117,8 @@ func GenerateConfig() Config {
 	if err != nil {
 		return cfg
 	}
-	cfg.Keys = append(cfg.Keys, KeyPair{Address: "*", Private: priv, Public: pub})
 
+	cfg.Clients = append(cfg.Clients, &Client{Address: "*", Private: priv, Public: pub})
 	return cfg
 }
 

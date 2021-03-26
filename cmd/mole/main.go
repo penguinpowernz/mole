@@ -47,8 +47,6 @@ func main() {
 		fmt.Println(cl)
 	})
 
-	pool := tunnel.NewConnPool(ctx, events)
-
 	var cfg *tunnel.Config
 
 	switch {
@@ -61,24 +59,8 @@ func main() {
 		cfg = loadConfig(cfgFile, keyfile)
 	}
 
-	if err := tunnel.PopulatePool(pool, *cfg); err != nil {
-		panic(err)
-	}
-
-	tuns := tunnel.BuildTunnels(*cfg)
-	for _, tun := range tuns {
-		log.Println("opening tunnel @", tun.Address, ":", tun.Local, "->", tun.Remote)
-		cl, err := pool.GetClient(tun.Address, cfg.KeyForAddress(tun.Address).Private)
-		if err != nil {
-			panic(err)
-		}
-
-		// TODO: add some persistent retrying for temporary connectivity issues
-		if err := tun.Open(ctx, cl); err != nil {
-			panic(err)
-		}
-
-		log.Println("opened tunnel ", tun.Name())
+	for _, cl := range cfg.Clients {
+		go cl.OpenTunnels(ctx, events)
 	}
 
 	// USR1 will dump stats
@@ -87,7 +69,7 @@ func main() {
 	go func() {
 		for {
 			<-sigusr1
-			dumpStats(tuns)
+			dumpStats(cfg.Tunnels().Open())
 		}
 	}()
 
@@ -126,9 +108,14 @@ func makeSingleTunnelConfig(a, r, l, k string) *tunnel.Config {
 	log.Printf("found keyfile at: %s", k)
 
 	return &tunnel.Config{
-		Keys: []tunnel.KeyPair{{Private: string(data), Address: a}},
-		Tunnels: []tunnel.Tunnel{
-			{Address: a, Local: l, Remote: r},
+		Clients: []*tunnel.Client{
+			{
+				Private: string(data),
+				Address: a,
+				Tunnels: []*tunnel.Tunnel{
+					{Local: l, Remote: r},
+				},
+			},
 		},
 	}
 }
@@ -153,7 +140,7 @@ func loadConfig(specifiedFilename, keyfile string) *tunnel.Config {
 	}
 
 	if keyfile != "" {
-		cfg.Keys = append(cfg.Keys, tunnel.KeyPair{Private: privateKeyText(keyfile), Address: "*"})
+		cfg.Clients = append(cfg.Clients, &tunnel.Client{Private: privateKeyText(keyfile), Address: "*"})
 	}
 
 	return cfg

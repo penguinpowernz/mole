@@ -1,8 +1,6 @@
 package tunnel
 
 import (
-	"sync"
-
 	"github.com/penguinpowernz/mole/pkg/sshutil"
 )
 
@@ -39,27 +37,4 @@ func PFD(def string) Option {
 		tun.Local, tun.Remote = sshutil.ParsePortForwardDefinition(def)
 		return nil
 	}
-}
-
-// BuildTunnelswill build a collection of tunnels from a config
-func BuildTunnels(cfg Config) []*Tunnel {
-	tuns := []*Tunnel{}
-	for _, t := range cfg.Tunnels {
-		if t.Disabled {
-			continue
-		}
-
-		t := &Tunnel{
-			Address:  t.Address,
-			Local:    t.Local,
-			Remote:   t.Remote,
-			Reverse:  t.Reverse,
-			Disabled: false,
-			mu:       new(sync.Mutex),
-		}
-
-		tuns = append(tuns, t)
-	}
-
-	return tuns
 }
